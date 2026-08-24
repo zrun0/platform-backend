@@ -1,0 +1,18 @@
+[project]
+name = "zrun-core"
+version = "0.1.0"
+description = "Shared core utilities: config, logging, errors, HTTP clients"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi",
+    "httpx",
+    "pydantic-settings",
+    "tenacity",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.9,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "zrun.core"

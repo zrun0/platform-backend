@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "python-development@claude-code-workflows": true
+  }
+}
