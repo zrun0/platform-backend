@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import pytest
 import respx
@@ -140,7 +142,7 @@ async def test_context_headers_propagated(
     assert headers.get("X-Request-ID") == "req-abc"
 
 
-def _ok(data: dict | list, *, status: int = 200) -> httpx.Response:
+def _ok(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx.Response:
     return httpx.Response(status, json=data)
 
 

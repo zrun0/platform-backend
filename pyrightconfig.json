@@ -1,0 +1,36 @@
+{
+  "include": [
+    "apps/**",
+    "packages/**"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.uv-cache/**",
+    "**/.venv/**"
+  ],
+  "venvPath": ".",
+  "venv": ".venv",
+  "pythonVersion": "3.14",
+  "typeCheckingMode": "strict",
+  "reportMissingTypeStubs": "warning",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "reportMissingParameterType": "warning",
+  "reportUnnecessaryTypeIgnoreComment": "warning",
+  "reportUnusedImport": "warning",
+  "reportUnusedClass": "warning",
+  "reportUnusedFunction": "none",
+  "stubPath": "",
+  "extraPaths": [
+    "apps/bff/src",
+    "apps/flow/src",
+    "apps/uc/src",
+    "packages/auth/src",
+    "packages/core/src",
+    "packages/flow-api/src",
+    "packages/uc-api/src"
+  ]
+}

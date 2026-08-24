@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 import respx
 from fastapi.testclient import TestClient
@@ -35,7 +37,7 @@ def test_list_flows_proxies_to_flow_service(respx_mock: respx.Router) -> None:
         response = client.get("/flows")
 
     assert response.status_code == 200
-    data = response.json()
+    data: list[dict[str, Any]] = response.json()
     assert len(data) == 1
     assert data[0]["id"] == "flow_1"
     assert data[0]["name"] == "demo"
@@ -67,7 +69,7 @@ def test_get_flow_404_propagates(respx_mock: respx.Router) -> None:
         response = client.get("/flows/nope")
 
     assert response.status_code == 404
-    body = response.json()
+    body: dict[str, Any] = response.json()
     assert body["error"] == "ServiceNotFoundError"
     assert body["service"] == "flow"
 
@@ -80,7 +82,7 @@ def test_get_flow_503_returns_502(respx_mock: respx.Router) -> None:
         response = client.get("/flows/1")
 
     assert response.status_code == 502
-    body = response.json()
+    body: dict[str, Any] = response.json()
     assert body["error"] == "ServiceUnavailableError"
     assert body["service"] == "flow"
 
@@ -122,7 +124,7 @@ def test_request_id_generated_when_missing(respx_mock: respx.Router) -> None:
 
     assert response.status_code == 200
     # Response echoes the generated ID
-    generated_id = response.headers.get("X-Request-ID")
+    generated_id: str | None = response.headers.get("X-Request-ID")
     assert generated_id is not None
     assert len(generated_id) > 0
     # Downstream call received the same generated ID
@@ -147,7 +149,7 @@ def test_create_flow(respx_mock: respx.Router) -> None:
     assert response.json()["name"] == "new-flow"
 
 
-def _ok(data: dict | list, *, status: int = 200) -> httpx.Response:
+def _ok(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx.Response:
     return httpx.Response(status, json=data)
 
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import pytest
@@ -150,6 +151,6 @@ async def test_context_headers_propagated(
     assert headers.get("X-User-ID") == "user-1"
 
 
-def httpx_response(status_code: int, json_data: dict | list) -> httpx.Response:
+def httpx_response(status_code: int, json_data: dict[str, Any] | list[Any]) -> httpx.Response:
     """Helper to build a respx mock response."""
     return httpx.Response(status_code, json=json_data)

@@ -18,7 +18,10 @@ from __future__ import annotations
 import inspect
 import typing
 from functools import wraps
-from typing import Any, Callable
+from typing import Any, Callable, ParamSpec, TypeVar
+
+P = ParamSpec("P")
+R = TypeVar("R")
 
 # Parameter names that are treated as the request body when present.
 _BODY_PARAM_NAMES = frozenset({"payload", "body", "data"})
@@ -30,7 +33,7 @@ _CTX_PARAM_NAME = "ctx"
 _PARTIAL_UPDATE_METHODS = frozenset({"PUT", "PATCH"})
 
 
-def _route(method: str, path: str) -> Callable:
+def _route(method: str, path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator factory: bind an HTTP method + path template to a method.
 
     For PUT and PATCH (partial update semantics), Pydantic body models
@@ -40,7 +43,7 @@ def _route(method: str, path: str) -> Callable:
 
     body_exclude_unset = method in _PARTIAL_UPDATE_METHODS
 
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         sig = inspect.signature(func)
 
         @wraps(func)
@@ -92,31 +95,34 @@ def _route(method: str, path: str) -> Callable:
                 response_model=response_model,
             )
 
-        return wrapper
+        # Cast wrapper to the expected signature. The actual runtime type is
+        # an async function that returns a coroutine, but the decorator claims
+        # to return the original function's signature (Callable[P, R]).
+        return typing.cast(Callable[P, R], wrapper)
 
     return decorator
 
 
-def get(path: str) -> Callable:
+def get(path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Declare a GET endpoint."""
     return _route("GET", path)
 
 
-def post(path: str) -> Callable:
+def post(path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Declare a POST endpoint."""
     return _route("POST", path)
 
 
-def put(path: str) -> Callable:
+def put(path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Declare a PUT endpoint."""
     return _route("PUT", path)
 
 
-def delete(path: str) -> Callable:
+def delete(path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Declare a DELETE endpoint."""
     return _route("DELETE", path)
 
 
-def patch(path: str) -> Callable:
+def patch(path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Declare a PATCH endpoint."""
     return _route("PATCH", path)

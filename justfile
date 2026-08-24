@@ -27,10 +27,10 @@ fmt:
 lint:
     uv run ruff check .
 
-# Type-check all code with ty
+# Type-check all code with pyright
 check:
-    uv run ty check .
+    uv run pyright .
 
 # Run all tests
 test:
-    uv run pytest
+    python -m pytest
