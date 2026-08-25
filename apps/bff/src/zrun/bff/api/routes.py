@@ -6,9 +6,11 @@ frontend-friendly endpoints.
 
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends
 
-from zrun.auth.dependencies import get_current_user
+from zrun.auth.types import CurrentUser
 from zrun.bff.dependencies import get_flow_client, get_request_context, get_uc_client
 from zrun.core.http.context import RequestContext
 from zrun.flow_api import FlowApi, FlowCreate, FlowResponse
@@ -24,7 +26,7 @@ def healthz() -> dict[str, str]:
 
 
 @router.get("/me")
-def me(user: str = Depends(get_current_user)) -> dict[str, str]:
+def me(user: CurrentUser) -> dict[str, str]:
     """Placeholder endpoint wired to the shared auth package."""
     return {"user": user}
 
@@ -36,8 +38,8 @@ def me(user: str = Depends(get_current_user)) -> dict[str, str]:
 
 @router.get("/flows", response_model=list[FlowResponse])
 async def list_flows(
-    flow_client: FlowApi = Depends(get_flow_client),
-    ctx: RequestContext = Depends(get_request_context),
+    flow_client: Annotated[FlowApi, Depends(get_flow_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> list[FlowResponse]:
     """List all flows (proxied from flow service)."""
     return await flow_client.list_flows(ctx=ctx)
@@ -46,8 +48,8 @@ async def list_flows(
 @router.get("/flows/{flow_id}", response_model=FlowResponse)
 async def get_flow(
     flow_id: str,
-    flow_client: FlowApi = Depends(get_flow_client),
-    ctx: RequestContext = Depends(get_request_context),
+    flow_client: Annotated[FlowApi, Depends(get_flow_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> FlowResponse:
     """Get a single flow (proxied from flow service)."""
     return await flow_client.get_flow(flow_id, ctx=ctx)
@@ -56,8 +58,8 @@ async def get_flow(
 @router.post("/flows", response_model=FlowResponse, status_code=201)
 async def create_flow(
     payload: FlowCreate,
-    flow_client: FlowApi = Depends(get_flow_client),
-    ctx: RequestContext = Depends(get_request_context),
+    flow_client: Annotated[FlowApi, Depends(get_flow_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> FlowResponse:
     """Create a flow (proxied to flow service)."""
     return await flow_client.create_flow(payload, ctx=ctx)
@@ -71,8 +73,8 @@ async def create_flow(
 @router.get("/users/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: str,
-    uc_client: UcApi = Depends(get_uc_client),
-    ctx: RequestContext = Depends(get_request_context),
+    uc_client: Annotated[UcApi, Depends(get_uc_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> UserResponse:
     """Get a single user (proxied from uc service)."""
     return await uc_client.get_user(user_id, ctx=ctx)
@@ -81,8 +83,8 @@ async def get_user(
 @router.get("/users/by-username/{username}", response_model=UserResponse)
 async def get_user_by_username(
     username: str,
-    uc_client: UcApi = Depends(get_uc_client),
-    ctx: RequestContext = Depends(get_request_context),
+    uc_client: Annotated[UcApi, Depends(get_uc_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> UserResponse:
     """Get a user by username (proxied from uc service)."""
     return await uc_client.get_user_by_username(username, ctx=ctx)
@@ -96,9 +98,9 @@ async def get_user_by_username(
 @router.get("/flows/{flow_id}/with-owner")
 async def get_flow_with_owner(
     flow_id: str,
-    flow_client: FlowApi = Depends(get_flow_client),
-    uc_client: UcApi = Depends(get_uc_client),
-    ctx: RequestContext = Depends(get_request_context),
+    flow_client: Annotated[FlowApi, Depends(get_flow_client)],
+    uc_client: Annotated[UcApi, Depends(get_uc_client)],
+    ctx: Annotated[RequestContext, Depends(get_request_context)],
 ) -> dict[str, object]:
     """Aggregate a flow with its owner info.
 

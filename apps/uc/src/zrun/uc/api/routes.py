@@ -5,9 +5,9 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 
-from zrun.auth.dependencies import get_current_user
+from zrun.auth.types import CurrentUser
 from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter()
@@ -24,7 +24,7 @@ def healthz() -> dict[str, str]:
 
 
 @router.get("/me")
-def me(user: str = Depends(get_current_user)) -> dict[str, str]:
+def me(user: CurrentUser) -> dict[str, str]:
     """Placeholder endpoint wired to the shared auth package."""
     return {"user": user}
 
@@ -36,7 +36,7 @@ def list_users() -> list[UserResponse]:
 
 
 @router.get("/users/by-username", response_model=UserResponse)
-def get_user_by_username(username: str = Query(...)) -> UserResponse:
+def get_user_by_username(username: Annotated[str, Query(...)]) -> UserResponse:
     """Retrieve a user by username."""
     user_id = _USERS_BY_USERNAME.get(username)
     if user_id is None or user_id not in _USERS:
@@ -55,7 +55,7 @@ def get_user(user_id: str) -> UserResponse:
 @router.post("/users", response_model=UserResponse, status_code=201)
 def create_user(
     payload: UserCreate,
-    _user: Annotated[str, Depends(get_current_user)],
+    _user: CurrentUser,
 ) -> UserResponse:
     """Create a new user."""
     if payload.username in _USERS_BY_USERNAME:
@@ -80,7 +80,7 @@ def create_user(
 def update_user(
     user_id: str,
     payload: UserUpdate,
-    _user: Annotated[str, Depends(get_current_user)],
+    _user: CurrentUser,
 ) -> UserResponse:
     """Update an existing user."""
     if user_id not in _USERS:
@@ -98,7 +98,7 @@ def update_user(
 @router.delete("/users/{user_id}", status_code=204)
 def delete_user(
     user_id: str,
-    _user: Annotated[str, Depends(get_current_user)],
+    _user: CurrentUser,
 ) -> None:
     """Delete a user by ID."""
     if user_id not in _USERS:

@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException
 
-from zrun.auth.dependencies import get_current_user
+from zrun.auth.types import CurrentUser
 from zrun.flow_api.models import FlowCreate, FlowResponse, FlowUpdate
 
 router = APIRouter()
@@ -23,7 +22,7 @@ def healthz() -> dict[str, str]:
 
 
 @router.get("/me")
-def me(user: str = Depends(get_current_user)) -> dict[str, str]:
+def me(user: CurrentUser) -> dict[str, str]:
     """Placeholder endpoint wired to the shared auth package."""
     return {"user": user}
 
@@ -44,7 +43,7 @@ def get_flow(flow_id: str) -> FlowResponse:
 
 @router.post("/flows", response_model=FlowResponse, status_code=201)
 def create_flow(
-    payload: FlowCreate, _user: Annotated[str, Depends(get_current_user)]
+    payload: FlowCreate, _user: CurrentUser
 ) -> FlowResponse:
     """Create a new flow."""
     now = datetime.now(UTC)
@@ -64,7 +63,7 @@ def create_flow(
 def update_flow(
     flow_id: str,
     payload: FlowUpdate,
-    _user: Annotated[str, Depends(get_current_user)],
+    _user: CurrentUser,
 ) -> FlowResponse:
     """Update an existing flow."""
     if flow_id not in _FLOWS:
@@ -82,7 +81,7 @@ def update_flow(
 @router.delete("/flows/{flow_id}", status_code=204)
 def delete_flow(
     flow_id: str,
-    _user: Annotated[str, Depends(get_current_user)],
+    _user: CurrentUser,
 ) -> None:
     """Delete a flow by ID."""
     if flow_id not in _FLOWS:
