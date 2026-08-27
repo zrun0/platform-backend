@@ -42,9 +42,7 @@ def get_flow(flow_id: str) -> FlowResponse:
 
 
 @router.post("/flows", response_model=FlowResponse, status_code=201)
-def create_flow(
-    payload: FlowCreate, _user: CurrentUser
-) -> FlowResponse:
+def create_flow(payload: FlowCreate, _user: CurrentUser) -> FlowResponse:
     """Create a new flow."""
     now = datetime.now(UTC)
     flow_id = f"flow_{len(_FLOWS) + 1}"

@@ -17,8 +17,9 @@ from __future__ import annotations
 
 import inspect
 import typing
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, ParamSpec, TypeVar
+from typing import Any, ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")

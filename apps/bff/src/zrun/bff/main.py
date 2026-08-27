@@ -32,7 +32,7 @@ class AppClients:
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """Manage service client lifecycle.
 
     Creates shared client instances on startup and gracefully closes

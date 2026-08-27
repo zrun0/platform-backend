@@ -4,23 +4,52 @@ from __future__ import annotations
 
 from typing import Any
 
-import httpx
+import pytest
 import respx
 from fastapi.testclient import TestClient
+from zrun_test_utils.helpers import error_response, ok_response
 
-from zrun.bff.main import create_app
+from zrun.bff.main import AppClients, create_app
 from zrun.bff.settings import Settings
+from zrun.flow_api import FlowServiceClient
 
 FLOW_URL = "http://flow-test:8001"
-UC_URL = "http://uc-test:8002"
 
 
-def _client() -> TestClient:
-    settings = Settings(flow_api_base_url=FLOW_URL, uc_api_base_url=UC_URL)
-    return TestClient(create_app(settings))
+@pytest.fixture
+def flow_client() -> TestClient:
+    """Test client fixture for flow endpoints.
+
+    Each test function that uses this fixture will get a fresh TestClient instance.
+    """
+    settings = Settings(flow_api_base_url=FLOW_URL)
+    app = create_app(settings)
+
+    # Manually initialize flow client for test environment
+    # (TestClient doesn't trigger lifespan events)
+    flow_client = FlowServiceClient(
+        base_url=settings.flow_api_base_url,
+        timeout=settings.flow_timeout,
+        max_connections=settings.max_connections,
+        max_keepalive_connections=settings.max_keepalive_connections,
+    )
+    # Create a minimal UC client placeholder (not used in flow tests)
+    from zrun.uc_api import UcServiceClient
+
+    uc_client = UcServiceClient(
+        base_url=settings.uc_api_base_url,
+        timeout=settings.uc_timeout,
+        max_connections=settings.max_connections,
+        max_keepalive_connections=settings.max_keepalive_connections,
+    )
+    app.state.clients = AppClients(flow=flow_client, uc=uc_client)
+
+    return TestClient(app)
 
 
-def test_list_flows_proxies_to_flow_service(respx_mock: respx.Router) -> None:
+def test_list_flows_proxies_to_flow_service(
+    flow_client: TestClient, respx_mock: respx.Router
+) -> None:
     """GET /flows should proxy to the flow service and return its response."""
     flow_data = [
         {
@@ -31,10 +60,9 @@ def test_list_flows_proxies_to_flow_service(respx_mock: respx.Router) -> None:
             "updated_at": "2024-01-01T00:00:00Z",
         },
     ]
-    respx_mock.get(f"{FLOW_URL}/flows").return_value = _ok(flow_data)
+    respx_mock.get(f"{FLOW_URL}/flows").return_value = ok_response(flow_data)
 
-    with _client() as client:
-        response = client.get("/flows")
+    response = flow_client.get("/flows")
 
     assert response.status_code == 200
     data: list[dict[str, Any]] = response.json()
@@ -43,7 +71,7 @@ def test_list_flows_proxies_to_flow_service(respx_mock: respx.Router) -> None:
     assert data[0]["name"] == "demo"
 
 
-def test_get_flow_returns_flow(respx_mock: respx.Router) -> None:
+def test_get_flow_returns_flow(flow_client: TestClient, respx_mock: respx.Router) -> None:
     """GET /flows/{id} should return the flow from the downstream service."""
     flow_data = {
         "id": "flow_42",
@@ -52,21 +80,19 @@ def test_get_flow_returns_flow(respx_mock: respx.Router) -> None:
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.get(f"{FLOW_URL}/flows/flow_42").return_value = _ok(flow_data)
+    respx_mock.get(f"{FLOW_URL}/flows/flow_42").return_value = ok_response(flow_data)
 
-    with _client() as client:
-        response = client.get("/flows/flow_42")
+    response = flow_client.get("/flows/flow_42")
 
     assert response.status_code == 200
     assert response.json()["name"] == "answer"
 
 
-def test_get_flow_404_propagates(respx_mock: respx.Router) -> None:
+def test_get_flow_404_propagates(flow_client: TestClient, respx_mock: respx.Router) -> None:
     """Downstream 404 should come back as BFF 404 with structured error."""
-    respx_mock.get(f"{FLOW_URL}/flows/nope").return_value = _not_found()
+    respx_mock.get(f"{FLOW_URL}/flows/nope").return_value = error_response("Not found", status=404)
 
-    with _client() as client:
-        response = client.get("/flows/nope")
+    response = flow_client.get("/flows/nope")
 
     assert response.status_code == 404
     body: dict[str, Any] = response.json()
@@ -74,12 +100,13 @@ def test_get_flow_404_propagates(respx_mock: respx.Router) -> None:
     assert body["service"] == "flow"
 
 
-def test_get_flow_503_returns_502(respx_mock: respx.Router) -> None:
+def test_get_flow_503_returns_502(flow_client: TestClient, respx_mock: respx.Router) -> None:
     """Downstream 5xx should come back as 502."""
-    respx_mock.get(f"{FLOW_URL}/flows/1").return_value = _server_error()
+    respx_mock.get(f"{FLOW_URL}/flows/1").return_value = error_response(
+        "Service unavailable", status=503
+    )
 
-    with _client() as client:
-        response = client.get("/flows/1")
+    response = flow_client.get("/flows/1")
 
     assert response.status_code == 502
     body: dict[str, Any] = response.json()
@@ -87,7 +114,7 @@ def test_get_flow_503_returns_502(respx_mock: respx.Router) -> None:
     assert body["service"] == "flow"
 
 
-def test_request_id_propagated(respx_mock: respx.Router) -> None:
+def test_request_id_propagated(flow_client: TestClient, respx_mock: respx.Router) -> None:
     """X-Request-ID should be forwarded to the downstream service."""
     flow_data = {
         "id": "flow_1",
@@ -97,17 +124,18 @@ def test_request_id_propagated(respx_mock: respx.Router) -> None:
         "updated_at": "2024-01-01T00:00:00Z",
     }
     route = respx_mock.get(f"{FLOW_URL}/flows/1")
-    route.return_value = _ok(flow_data)
+    route.return_value = ok_response(flow_data)
 
-    with _client() as client:
-        response = client.get("/flows/1", headers={"X-Request-ID": "test-req-42"})
+    response = flow_client.get("/flows/1", headers={"X-Request-ID": "test-req-42"})
 
     assert response.status_code == 200
     assert route.calls.last.request.headers.get("X-Request-ID") == "test-req-42"
     assert response.headers.get("X-Request-ID") == "test-req-42"
 
 
-def test_request_id_generated_when_missing(respx_mock: respx.Router) -> None:
+def test_request_id_generated_when_missing(
+    flow_client: TestClient, respx_mock: respx.Router
+) -> None:
     """When X-Request-ID is absent, BFF generates one and forwards it downstream."""
     flow_data = {
         "id": "flow_1",
@@ -117,10 +145,9 @@ def test_request_id_generated_when_missing(respx_mock: respx.Router) -> None:
         "updated_at": "2024-01-01T00:00:00Z",
     }
     route = respx_mock.get(f"{FLOW_URL}/flows/1")
-    route.return_value = _ok(flow_data)
+    route.return_value = ok_response(flow_data)
 
-    with _client() as client:
-        response = client.get("/flows/1")
+    response = flow_client.get("/flows/1")
 
     assert response.status_code == 200
     # Response echoes the generated ID
@@ -131,7 +158,7 @@ def test_request_id_generated_when_missing(respx_mock: respx.Router) -> None:
     assert route.calls.last.request.headers.get("X-Request-ID") == generated_id
 
 
-def test_create_flow(respx_mock: respx.Router) -> None:
+def test_create_flow(flow_client: TestClient, respx_mock: respx.Router) -> None:
     """POST /flows should proxy create to the flow service."""
     flow_data = {
         "id": "flow_1",
@@ -140,22 +167,9 @@ def test_create_flow(respx_mock: respx.Router) -> None:
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.post(f"{FLOW_URL}/flows").return_value = _ok(flow_data, status=201)
+    respx_mock.post(f"{FLOW_URL}/flows").return_value = ok_response(flow_data, status=201)
 
-    with _client() as client:
-        response = client.post("/flows", json={"name": "new-flow", "description": "test"})
+    response = flow_client.post("/flows", json={"name": "new-flow", "description": "test"})
 
     assert response.status_code == 201
     assert response.json()["name"] == "new-flow"
-
-
-def _ok(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx.Response:
-    return httpx.Response(status, json=data)
-
-
-def _not_found() -> httpx.Response:
-    return httpx.Response(404, json={"detail": "Not found"})
-
-
-def _server_error() -> httpx.Response:
-    return httpx.Response(503, json={"detail": "Service unavailable"})

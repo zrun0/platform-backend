@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
 
-import httpx
 import pytest
 import respx
+from zrun_test_utils.helpers import ok_response
 
 from zrun.core.errors import (
     ServiceNotFoundError,
@@ -37,7 +36,7 @@ async def test_get_flow_parses_response(
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.get(f"{BASE_URL}/flows/flow_1").return_value = httpx_response(200, flow_data)
+    respx_mock.get(f"{BASE_URL}/flows/flow_1").return_value = ok_response(flow_data)
 
     result = await client.get_flow("flow_1")
 
@@ -52,8 +51,8 @@ async def test_get_flow_404_raises_not_found(
     client: FlowServiceClient, respx_mock: respx.Router
 ) -> None:
     """404 responses should map to ServiceNotFoundError."""
-    respx_mock.get(f"{BASE_URL}/flows/flow_999").return_value = httpx_response(
-        404, {"detail": "Not found"}
+    respx_mock.get(f"{BASE_URL}/flows/flow_999").return_value = ok_response(
+        {"detail": "Not found"}, status=404
     )
 
     with pytest.raises(ServiceNotFoundError) as exc_info:
@@ -70,7 +69,7 @@ async def test_get_flow_503_raises_unavailable(
     """503 responses should map to ServiceUnavailableError (with retry disabled)."""
     # With max_retries=1 there is no retry, so it fails immediately.
     client = FlowServiceClient(base_url=BASE_URL, max_retries=0)
-    respx_mock.get(f"{BASE_URL}/flows/1").return_value = httpx_response(503, {"detail": "down"})
+    respx_mock.get(f"{BASE_URL}/flows/1").return_value = ok_response({"detail": "down"}, status=503)
 
     with pytest.raises(ServiceUnavailableError) as exc_info:
         await client.get_flow("1")
@@ -91,7 +90,7 @@ async def test_list_flows(client: FlowServiceClient, respx_mock: respx.Router) -
         }
         for i in range(3)
     ]
-    respx_mock.get(f"{BASE_URL}/flows").return_value = httpx_response(200, flows_data)
+    respx_mock.get(f"{BASE_URL}/flows").return_value = ok_response(flows_data)
 
     result = await client.list_flows()
 
@@ -111,7 +110,7 @@ async def test_create_flow(client: FlowServiceClient, respx_mock: respx.Router) 
         "created_at": now,
         "updated_at": now,
     }
-    respx_mock.post(f"{BASE_URL}/flows").return_value = httpx_response(201, flow_data)
+    respx_mock.post(f"{BASE_URL}/flows").return_value = ok_response(flow_data, status=201)
 
     payload = FlowCreate(name="new-flow", description="test")
     result = await client.create_flow(payload)
@@ -133,7 +132,7 @@ async def test_context_headers_propagated(
         "updated_at": "2024-01-01T00:00:00Z",
     }
     route = respx_mock.get(f"{BASE_URL}/flows/1")
-    route.return_value = httpx_response(200, flow_data)
+    route.return_value = ok_response(flow_data)
 
     ctx = RequestContext(
         auth_token="Bearer test-token",
@@ -149,8 +148,3 @@ async def test_context_headers_propagated(
     assert headers.get("X-Request-ID") == "req-123"
     assert headers.get("X-Trace-ID") == "trace-456"
     assert headers.get("X-User-ID") == "user-1"
-
-
-def httpx_response(status_code: int, json_data: dict[str, Any] | list[Any]) -> httpx.Response:
-    """Helper to build a respx mock response."""
-    return httpx.Response(status_code, json=json_data)

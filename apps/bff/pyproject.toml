@@ -13,11 +13,17 @@ dependencies = [
     "zrun-uc-api",
 ]
 
+[dependency-groups]
+dev = [
+    "zrun-test-utils",
+]
+
 [tool.uv.sources]
 zrun-auth = { workspace = true }
 zrun-core = { workspace = true }
 zrun-flow-api = { workspace = true }
 zrun-uc-api = { workspace = true }
+zrun-test-utils = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]

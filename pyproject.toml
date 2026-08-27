@@ -3,7 +3,9 @@ name = "zrun-workspace"
 version = "0.1.0"
 description = "zrun FastAPI monorepo (workspace root)"
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "httpx2>=2.12.0",
+]
 
 [dependency-groups]
 dev = [
@@ -40,3 +42,13 @@ known-first-party = ["zrun"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]
+asyncio_mode = "auto"  # Auto-detect async tests
+addopts = [
+    "--strict-markers",  # Strict marker checking
+    "-v",                # Verbose output
+    "--tb=short",        # Short traceback format
+]
+markers = [
+    "integration: integration tests (slower, uses external services)",
+    "unit: unit tests (fast, isolated)",
+]

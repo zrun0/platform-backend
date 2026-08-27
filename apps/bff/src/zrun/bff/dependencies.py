@@ -7,7 +7,9 @@ Client instances are created at startup and shared across requests
 
 from __future__ import annotations
 
-from fastapi import Request
+from typing import Annotated
+
+from fastapi import Depends, Request
 
 from zrun.core.http.context import RequestContext
 from zrun.flow_api import FlowApi
@@ -27,3 +29,9 @@ def get_uc_client(request: Request) -> UcApi:
 def get_request_context(request: Request) -> RequestContext:
     """Build a RequestContext from the current incoming request."""
     return RequestContext.from_request(request)
+
+
+# Type aliases for dependency injection - improves route handler readability
+FlowClientDep = Annotated[FlowApi, Depends(get_flow_client)]
+UcClientDep = Annotated[UcApi, Depends(get_uc_client)]
+RequestContextDep = Annotated[RequestContext, Depends(get_request_context)]
