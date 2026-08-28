@@ -3,21 +3,21 @@
 default:
     @just --list
 
+# ---- Development Setup ----
+
 # Sync workspace: install all packages and dev tools
 sync:
     uv sync --all-packages
 
-# Run the BFF service with auto-reload
-dev-bff:
-    uv run --package zrun-bff uvicorn zrun.bff.main:app --reload
+# ---- Service Development ----
 
-# Run the UC service with auto-reload
-dev-uc:
-    uv run --package zrun-uc uvicorn zrun.uc.main:app --reload
+# Run any service with auto-reload
+# Usage: just dev <service-name>
+# Examples: just dev bff, just dev uc, just dev flow
+dev service:
+    uv run --package zrun-{{ service }} uvicorn zrun.{{ service }}.main:app --reload
 
-# Run the Flow service with auto-reload
-dev-flow:
-    uv run --package zrun-flow uvicorn zrun.flow.main:app --reload
+# ---- Code Quality ----
 
 # Format all code with ruff
 fmt:
@@ -27,10 +27,23 @@ fmt:
 lint:
     uv run ruff check .
 
+# Auto-fix all fixable code quality issues
+fix:
+    uv run ruff format . && uv run ruff check --fix .
+
 # Type-check all code with pyright
 check:
     uv run pyright .
 
+# Run all quality checks: format, lint, and type-check
+qa: fmt lint check
+
+# ---- Testing ----
+
 # Run all tests
 test:
     python -m pytest
+
+# Run tests with coverage
+test-cov:
+    python -m pytest --cov=apps --cov=packages --cov-report=term-missing
