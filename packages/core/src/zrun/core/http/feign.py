@@ -82,7 +82,7 @@ def _route(method: str, path: str) -> Callable[[Callable[P, R]], Callable[P, R]]
                 if f"{{{name}}}" in path:
                     path_vars[name] = value
                 elif value is not None:
-                    # Skip None values so httpx doesn't encode them.
+                    # Skip None values so httpx2 doesn't encode them.
                     query_params[name] = value
 
             formatted_path = path.format(**path_vars)

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import pytest
-import respx
+from zrun_test_utils import MockRouter
 from zrun_test_utils.helpers import error_response, ok_response
 
 from zrun.core.errors import ServiceNotFoundError
@@ -15,12 +15,12 @@ BASE_URL = "https://uc.test"
 
 
 @pytest.fixture
-def client() -> UcServiceClient:
-    return UcServiceClient(base_url=BASE_URL, max_retries=1)
+def client(mock_router: MockRouter) -> UcServiceClient:
+    return UcServiceClient(base_url=BASE_URL, max_retries=1, transport=mock_router)
 
 
 @pytest.mark.asyncio
-async def test_get_user_parses_response(client: UcServiceClient, respx_mock: respx.Router) -> None:
+async def test_get_user_parses_response(client: UcServiceClient, mock_router: MockRouter) -> None:
     """Client should parse a successful response into UserResponse."""
     user_data = {
         "id": "user_1",
@@ -30,7 +30,7 @@ async def test_get_user_parses_response(client: UcServiceClient, respx_mock: res
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.get(f"{BASE_URL}/users/user_1").return_value = ok_response(user_data)
+    mock_router.get(f"{BASE_URL}/users/user_1").return_value = ok_response(user_data)
 
     result = await client.get_user("user_1")
 
@@ -42,10 +42,10 @@ async def test_get_user_parses_response(client: UcServiceClient, respx_mock: res
 
 @pytest.mark.asyncio
 async def test_get_user_404_raises_not_found(
-    client: UcServiceClient, respx_mock: respx.Router
+    client: UcServiceClient, mock_router: MockRouter
 ) -> None:
     """404 responses should map to ServiceNotFoundError."""
-    respx_mock.get(f"{BASE_URL}/users/nope").return_value = error_response("Not found", status=404)
+    mock_router.get(f"{BASE_URL}/users/nope").return_value = error_response("Not found", status=404)
 
     with pytest.raises(ServiceNotFoundError) as exc_info:
         await client.get_user("nope")
@@ -55,7 +55,7 @@ async def test_get_user_404_raises_not_found(
 
 
 @pytest.mark.asyncio
-async def test_get_user_by_username(client: UcServiceClient, respx_mock: respx.Router) -> None:
+async def test_get_user_by_username(client: UcServiceClient, mock_router: MockRouter) -> None:
     """get_user_by_username should pass the username as a query param."""
     user_data = {
         "id": "user_1",
@@ -65,7 +65,7 @@ async def test_get_user_by_username(client: UcServiceClient, respx_mock: respx.R
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    route = respx_mock.get(f"{BASE_URL}/users/by-username")
+    route = mock_router.get(f"{BASE_URL}/users/by-username")
     route.return_value = ok_response(user_data)
 
     result = await client.get_user_by_username("bob")
@@ -75,7 +75,7 @@ async def test_get_user_by_username(client: UcServiceClient, respx_mock: respx.R
 
 
 @pytest.mark.asyncio
-async def test_list_users(client: UcServiceClient, respx_mock: respx.Router) -> None:
+async def test_list_users(client: UcServiceClient, mock_router: MockRouter) -> None:
     """list_users should return a list of UserResponse."""
     users_data = [
         {
@@ -88,7 +88,7 @@ async def test_list_users(client: UcServiceClient, respx_mock: respx.Router) -> 
         }
         for i in range(2)
     ]
-    respx_mock.get(f"{BASE_URL}/users").return_value = ok_response(users_data)
+    mock_router.get(f"{BASE_URL}/users").return_value = ok_response(users_data)
 
     result = await client.list_users()
 
@@ -97,7 +97,7 @@ async def test_list_users(client: UcServiceClient, respx_mock: respx.Router) -> 
 
 
 @pytest.mark.asyncio
-async def test_create_user(client: UcServiceClient, respx_mock: respx.Router) -> None:
+async def test_create_user(client: UcServiceClient, mock_router: MockRouter) -> None:
     """create_user should POST and parse the response (no retry for POST)."""
     user_data = {
         "id": "user_1",
@@ -107,7 +107,7 @@ async def test_create_user(client: UcServiceClient, respx_mock: respx.Router) ->
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.post(f"{BASE_URL}/users").return_value = ok_response(user_data, status=201)
+    mock_router.post(f"{BASE_URL}/users").return_value = ok_response(user_data, status=201)
 
     payload = UserCreate(username="charlie", email="charlie@example.com", password="secret123")
     result = await client.create_user(payload)
@@ -116,9 +116,7 @@ async def test_create_user(client: UcServiceClient, respx_mock: respx.Router) ->
 
 
 @pytest.mark.asyncio
-async def test_context_headers_propagated(
-    client: UcServiceClient, respx_mock: respx.Router
-) -> None:
+async def test_context_headers_propagated(client: UcServiceClient, mock_router: MockRouter) -> None:
     """RequestContext headers should be forwarded to the downstream service."""
     user_data = {
         "id": "user_1",
@@ -128,7 +126,7 @@ async def test_context_headers_propagated(
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    route = respx_mock.get(f"{BASE_URL}/users/1")
+    route = mock_router.get(f"{BASE_URL}/users/1")
     route.return_value = ok_response(user_data)
 
     ctx = RequestContext(auth_token="Bearer tok", request_id="req-abc")

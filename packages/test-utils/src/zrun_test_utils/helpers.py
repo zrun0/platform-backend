@@ -1,16 +1,16 @@
 """Shared test utilities for HTTP response mocking.
 
-This module provides helper functions to create httpx.Response objects
+This module provides helper functions to create httpx2.Response objects
 for testing purposes. These are particularly useful when mocking HTTP
 clients in unit and integration tests.
 """
 
 from typing import Any
 
-import httpx
+import httpx2
 
 
-def ok_response(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx.Response:
+def ok_response(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx2.Response:
     """Create a successful HTTP response for testing.
 
     Args:
@@ -18,7 +18,7 @@ def ok_response(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx
         status: HTTP status code (default: 200)
 
     Returns:
-        An httpx.Response object with the provided data and status
+        An httpx2.Response object with the provided data and status
 
     Example:
         >>> response = ok_response({"user": "alice"})
@@ -27,10 +27,10 @@ def ok_response(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx
         >>> response.json() == {"user": "alice"}
         True
     """
-    return httpx.Response(status, json=data)
+    return httpx2.Response(status, json=data)
 
 
-def error_response(detail: str, *, status: int = 404) -> httpx.Response:
+def error_response(detail: str, *, status: int = 404) -> httpx2.Response:
     """Create an error HTTP response for testing.
 
     Args:
@@ -38,7 +38,7 @@ def error_response(detail: str, *, status: int = 404) -> httpx.Response:
         status: HTTP error status code (default: 404)
 
     Returns:
-        An httpx.Response object with error detail and status
+        An httpx2.Response object with error detail and status
 
     Example:
         >>> response = error_response("User not found", status=404)
@@ -47,4 +47,4 @@ def error_response(detail: str, *, status: int = 404) -> httpx.Response:
         >>> response.json() == {"detail": "User not found"}
         True
     """
-    return httpx.Response(status, json={"detail": detail})
+    return httpx2.Response(status, json={"detail": detail})

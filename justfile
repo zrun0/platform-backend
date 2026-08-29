@@ -42,8 +42,8 @@ qa: fmt lint check
 
 # Run all tests
 test:
-    python -m pytest
+    uv run --all-packages python -m pytest
 
 # Run tests with coverage
 test-cov:
-    python -m pytest --cov=apps --cov=packages --cov-report=term-missing
+    uv run --all-packages python -m pytest --cov=apps --cov=packages --cov-report=term-missing

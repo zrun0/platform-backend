@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-import respx
 from fastapi.testclient import TestClient
+from zrun_test_utils import MockRouter
 from zrun_test_utils.helpers import error_response, ok_response
 
 from zrun.bff.main import AppClients, create_app
@@ -17,7 +17,7 @@ UC_URL = "http://uc-test:8002"
 
 
 @pytest.fixture
-def uc_client() -> TestClient:
+def uc_client(mock_router: MockRouter) -> TestClient:
     """Test client fixture for UC endpoints.
 
     Each test function that uses this fixture will get a fresh TestClient instance.
@@ -32,6 +32,7 @@ def uc_client() -> TestClient:
         timeout=settings.uc_timeout,
         max_connections=settings.max_connections,
         max_keepalive_connections=settings.max_keepalive_connections,
+        transport=mock_router,
     )
     # Create a minimal flow client placeholder (not used in UC tests)
     from zrun.flow_api import FlowServiceClient
@@ -41,13 +42,14 @@ def uc_client() -> TestClient:
         timeout=settings.flow_timeout,
         max_connections=settings.max_connections,
         max_keepalive_connections=settings.max_keepalive_connections,
+        transport=mock_router,
     )
     app.state.clients = AppClients(flow=flow_client, uc=uc_client)
 
     return TestClient(app)
 
 
-def test_get_user_proxies_to_uc_service(uc_client: TestClient, respx_mock: respx.Router) -> None:
+def test_get_user_proxies_to_uc_service(uc_client: TestClient, mock_router: MockRouter) -> None:
     """GET /users/{id} should proxy to the UC service and return its response."""
     user_data = {
         "id": "user_1",
@@ -57,7 +59,7 @@ def test_get_user_proxies_to_uc_service(uc_client: TestClient, respx_mock: respx
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    respx_mock.get(f"{UC_URL}/users/user_1").return_value = ok_response(user_data)
+    mock_router.get(f"{UC_URL}/users/user_1").return_value = ok_response(user_data)
 
     response = uc_client.get("/users/user_1")
 
@@ -70,7 +72,7 @@ def test_get_user_proxies_to_uc_service(uc_client: TestClient, respx_mock: respx
 
 
 def test_get_user_by_username_proxies_to_uc_service(
-    uc_client: TestClient, respx_mock: respx.Router
+    uc_client: TestClient, mock_router: MockRouter
 ) -> None:
     """GET /users/by-username should proxy to UC service and return response."""
     user_data = {
@@ -81,7 +83,7 @@ def test_get_user_by_username_proxies_to_uc_service(
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    route = respx_mock.get(f"{UC_URL}/users/by-username")
+    route = mock_router.get(f"{UC_URL}/users/by-username")
     route.return_value = ok_response(user_data)
 
     response = uc_client.get("/users/by-username/bob")
@@ -95,9 +97,9 @@ def test_get_user_by_username_proxies_to_uc_service(
     assert route.calls.last.request.url.params.get("username") == "bob"
 
 
-def test_get_user_404_propagates(uc_client: TestClient, respx_mock: respx.Router) -> None:
+def test_get_user_404_propagates(uc_client: TestClient, mock_router: MockRouter) -> None:
     """Downstream 404 should come back as BFF 404 with structured error."""
-    respx_mock.get(f"{UC_URL}/users/nope").return_value = error_response("Not found", status=404)
+    mock_router.get(f"{UC_URL}/users/nope").return_value = error_response("Not found", status=404)
 
     response = uc_client.get("/users/nope")
 
@@ -107,9 +109,9 @@ def test_get_user_404_propagates(uc_client: TestClient, respx_mock: respx.Router
     assert body["service"] == "uc"
 
 
-def test_get_user_503_returns_502(uc_client: TestClient, respx_mock: respx.Router) -> None:
+def test_get_user_503_returns_502(uc_client: TestClient, mock_router: MockRouter) -> None:
     """Downstream 5xx should come back as 502."""
-    respx_mock.get(f"{UC_URL}/users/1").return_value = error_response(
+    mock_router.get(f"{UC_URL}/users/1").return_value = error_response(
         "Service unavailable", status=503
     )
 
@@ -121,7 +123,7 @@ def test_get_user_503_returns_502(uc_client: TestClient, respx_mock: respx.Route
     assert body["service"] == "uc"
 
 
-def test_request_id_propagated_to_uc(uc_client: TestClient, respx_mock: respx.Router) -> None:
+def test_request_id_propagated_to_uc(uc_client: TestClient, mock_router: MockRouter) -> None:
     """X-Request-ID should be forwarded to the UC service."""
     user_data = {
         "id": "user_1",
@@ -131,7 +133,7 @@ def test_request_id_propagated_to_uc(uc_client: TestClient, respx_mock: respx.Ro
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    route = respx_mock.get(f"{UC_URL}/users/1")
+    route = mock_router.get(f"{UC_URL}/users/1")
     route.return_value = ok_response(user_data)
 
     response = uc_client.get("/users/1", headers={"X-Request-ID": "test-req-42"})
@@ -142,7 +144,7 @@ def test_request_id_propagated_to_uc(uc_client: TestClient, respx_mock: respx.Ro
 
 
 def test_request_id_generated_when_missing_for_uc(
-    uc_client: TestClient, respx_mock: respx.Router
+    uc_client: TestClient, mock_router: MockRouter
 ) -> None:
     """When X-Request-ID is absent, BFF generates one and forwards it to UC service."""
     user_data = {
@@ -153,7 +155,7 @@ def test_request_id_generated_when_missing_for_uc(
         "created_at": "2024-01-01T00:00:00Z",
         "updated_at": "2024-01-01T00:00:00Z",
     }
-    route = respx_mock.get(f"{UC_URL}/users/1")
+    route = mock_router.get(f"{UC_URL}/users/1")
     route.return_value = ok_response(user_data)
 
     response = uc_client.get("/users/1")
@@ -168,10 +170,10 @@ def test_request_id_generated_when_missing_for_uc(
 
 
 def test_get_user_by_username_404_propagates(
-    uc_client: TestClient, respx_mock: respx.Router
+    uc_client: TestClient, mock_router: MockRouter
 ) -> None:
     """Downstream 404 for username lookup should come back as BFF 404."""
-    route = respx_mock.get(f"{UC_URL}/users/by-username")
+    route = mock_router.get(f"{UC_URL}/users/by-username")
     route.return_value = error_response("Not found", status=404)
 
     response = uc_client.get("/users/by-username/nonexistent")

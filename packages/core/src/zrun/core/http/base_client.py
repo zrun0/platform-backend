@@ -7,9 +7,10 @@ request context propagation, error mapping, and response model parsing.
 from __future__ import annotations
 
 import logging
+from functools import cache
 from typing import Any, TypeVar, cast, overload
 
-import httpx
+import httpx2
 from pydantic import TypeAdapter
 from tenacity import (
     AsyncRetrying,
@@ -31,16 +32,27 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
+
+@cache
+def _type_adapter(model: Any) -> TypeAdapter[Any]:
+    """Build and cache a TypeAdapter for a response model.
+
+    TypeAdapter construction is not free; caching keeps per-request parsing
+    allocation-free for repeated models.
+    """
+    return TypeAdapter(model)
+
+
 # HTTP methods that are safe to retry (idempotent).
 _IDEMPOTENT_METHODS = {"GET", "HEAD", "OPTIONS", "PUT", "DELETE"}
 
 
 def _map_http_error(
-    exc: httpx.HTTPStatusError,
+    exc: httpx2.HTTPStatusError,
     *,
     service_name: str,
 ) -> ServiceCallError:
-    """Map an httpx HTTP status error to the appropriate ServiceCallError subtype."""
+    """Map an httpx2 HTTP status error to the appropriate ServiceCallError subtype."""
     status = exc.response.status_code
     body = exc.response.text
 
@@ -71,12 +83,12 @@ def _map_http_error(
 
 
 def _map_transport_error(
-    exc: httpx.TransportError,
+    exc: httpx2.TransportError,
     *,
     service_name: str,
 ) -> ServiceCallError:
-    """Map an httpx transport error to the appropriate ServiceCallError subtype."""
-    if isinstance(exc, httpx.TimeoutException):
+    """Map an httpx2 transport error to the appropriate ServiceCallError subtype."""
+    if isinstance(exc, httpx2.TimeoutException):
         return ServiceTimeoutError(
             f"Call to {service_name} timed out",
             service_name=service_name,
@@ -105,15 +117,17 @@ class BaseServiceClient:
         max_retries: int = 3,
         retry_min_delay: float = 0.1,
         retry_max_delay: float = 5.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
         self.service_name = service_name
         self._max_retries = max_retries
         self._retry_min_delay = retry_min_delay
         self._retry_max_delay = retry_max_delay
-        self._client = httpx.AsyncClient(
+        self._client = httpx2.AsyncClient(
             base_url=base_url,
             timeout=timeout,
-            limits=httpx.Limits(
+            transport=transport,
+            limits=httpx2.Limits(
                 max_connections=max_connections,
                 max_keepalive_connections=max_keepalive_connections,
             ),
@@ -145,13 +159,13 @@ class BaseServiceClient:
             path: URL path relative to base_url.
             ctx: Request context for header propagation.
             response_model: Pydantic model (or builtin type) to parse the
-                response body into. If None, returns the raw httpx.Response.
+                response body into. If None, returns the raw httpx2.Response.
             json: JSON request body.
             params: Query parameters.
             headers: Additional request headers (merged with ctx headers).
 
         Returns:
-            Parsed response if response_model is provided, else httpx.Response.
+            Parsed response if response_model is provided, else httpx2.Response.
 
         Raises:
             ServiceCallError: Subtype indicating the failure mode.
@@ -196,12 +210,12 @@ class BaseServiceClient:
                 json=json_body,
                 params=params,
             )
-        except httpx.TransportError as exc:
+        except httpx2.TransportError as exc:
             raise _map_transport_error(exc, service_name=self.service_name) from exc
 
         try:
             response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
+        except httpx2.HTTPStatusError as exc:
             raise _map_http_error(exc, service_name=self.service_name) from exc
 
         return cast(T, self._parse_response(response, response_model))
@@ -251,20 +265,19 @@ class BaseServiceClient:
     @staticmethod
     @overload
     def _parse_response(
-        response: httpx.Response, response_model: None = None
-    ) -> httpx.Response: ...
+        response: httpx2.Response, response_model: None = None
+    ) -> httpx2.Response: ...
 
     @staticmethod
     @overload
-    def _parse_response(response: httpx.Response, response_model: type[T]) -> T: ...
+    def _parse_response(response: httpx2.Response, response_model: type[T]) -> T: ...
 
     @staticmethod
     def _parse_response(
-        response: httpx.Response,
+        response: httpx2.Response,
         response_model: type[T] | None = None,
-    ) -> T | httpx.Response:
+    ) -> T | httpx2.Response:
         """Parse response body into a model, or return raw response."""
         if response_model is None:
             return response
-        adapter = TypeAdapter(response_model)
-        return adapter.validate_python(response.json())
+        return _type_adapter(response_model).validate_python(response.json())

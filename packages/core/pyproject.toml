@@ -5,7 +5,7 @@ description = "Shared core utilities: config, logging, errors, HTTP clients"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi",
-    "httpx",
+    "httpx2",
     "pydantic-settings",
     "tenacity",
 ]
