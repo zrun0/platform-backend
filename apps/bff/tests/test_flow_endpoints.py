@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -9,44 +10,15 @@ from fastapi.testclient import TestClient
 from zrun_test_utils import MockRouter
 from zrun_test_utils.helpers import error_response, ok_response
 
-from zrun.bff.main import AppClients, create_app
 from zrun.bff.settings import Settings
-from zrun.flow_api import FlowServiceClient
 
 FLOW_URL = "http://flow-test:8001"
 
 
 @pytest.fixture
-def flow_client(mock_router: MockRouter) -> TestClient:
-    """Test client fixture for flow endpoints.
-
-    Each test function that uses this fixture will get a fresh TestClient instance.
-    """
-    settings = Settings(flow_api_base_url=FLOW_URL)
-    app = create_app(settings)
-
-    # Manually initialize flow client for test environment
-    # (TestClient doesn't trigger lifespan events)
-    flow_client = FlowServiceClient(
-        base_url=settings.flow_api_base_url,
-        timeout=settings.flow_timeout,
-        max_connections=settings.max_connections,
-        max_keepalive_connections=settings.max_keepalive_connections,
-        transport=mock_router,
-    )
-    # Create a minimal UC client placeholder (not used in flow tests)
-    from zrun.uc_api import UcServiceClient
-
-    uc_client = UcServiceClient(
-        base_url=settings.uc_api_base_url,
-        timeout=settings.uc_timeout,
-        max_connections=settings.max_connections,
-        max_keepalive_connections=settings.max_keepalive_connections,
-        transport=mock_router,
-    )
-    app.state.clients = AppClients(flow=flow_client, uc=uc_client)
-
-    return TestClient(app)
+def flow_client(make_bff_client: Callable[[Settings], TestClient]) -> TestClient:
+    """Test client for flow endpoints, fresh per test function."""
+    return make_bff_client(Settings(flow_api_base_url=FLOW_URL))
 
 
 def test_list_flows_proxies_to_flow_service(

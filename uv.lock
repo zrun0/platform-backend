@@ -18,6 +18,7 @@ constraints = [
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx2", specifier = ">=2.12" },
     { name = "pydantic-settings", specifier = ">=2.0" },
+    { name = "pytest", specifier = ">=8.0" },
     { name = "tenacity", specifier = ">=9.0" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
@@ -594,10 +595,14 @@ version = "0.1.0"
 source = { editable = "packages/test-utils" }
 dependencies = [
     { name = "httpx2" },
+    { name = "pytest" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "httpx2" }]
+requires-dist = [
+    { name = "httpx2" },
+    { name = "pytest" },
+]
 
 [[package]]
 name = "zrun-uc"

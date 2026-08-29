@@ -19,6 +19,7 @@ package = false
 # Centralized third-party version constraints; workspace members declare bare names.
 constraint-dependencies = [
     "fastapi>=0.115",
+    "pytest>=8.0",
     "httpx2>=2.12",
     "pydantic-settings>=2.0",
     "tenacity>=9.0",

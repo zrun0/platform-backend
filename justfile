@@ -35,8 +35,8 @@ fix:
 check:
     uv run pyright .
 
-# Run all quality checks: format, lint, and type-check
-qa: fmt lint check
+# Run all read-only quality checks (use `fix` to format/auto-fix)
+qa: lint check
 
 # ---- Testing ----
 

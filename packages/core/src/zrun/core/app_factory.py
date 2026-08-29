@@ -6,7 +6,7 @@ from collections.abc import Callable
 from contextlib import AbstractAsyncContextManager
 from typing import Any, Protocol
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 
 from zrun.core.middleware import RequestIDMiddleware
 
@@ -21,10 +21,9 @@ class ServiceSettings(Protocol):
 
 def create_basic_app(
     settings: ServiceSettings,
-    router: Any,  # APIRouter from fastapi
+    router: APIRouter,
     *,
     lifespan: Lifespan | None = None,
-    middleware: list[type] | None = None,
 ) -> FastAPI:
     """Create a basic FastAPI application with standard setup.
 
@@ -36,7 +35,6 @@ def create_basic_app(
         settings: Application settings with at least a service_name field
         router: Main API router to include in the application
         lifespan: Optional lifespan context manager for startup/shutdown hooks
-        middleware: Additional middleware classes beyond RequestIDMiddleware
 
     Returns:
         Configured FastAPI application ready for use
@@ -50,11 +48,6 @@ def create_basic_app(
 
     # Standard middleware - always included
     app.add_middleware(RequestIDMiddleware)
-
-    # Additional middleware - optional
-    if middleware:
-        for mw in middleware:
-            app.add_middleware(mw)
 
     app.include_router(router)
     return app

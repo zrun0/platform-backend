@@ -42,6 +42,19 @@ strings are ignored, host casing and default ports are normalized (like
 respx's default). Unregistered requests, and routes registered without a
 `return_value`, raise `AssertionError` so failures are loud.
 
+## Pytest fixtures
+
+The package registers itself as a pytest plugin (pytest11 entry point), so
+wherever it is installed a `mock_router` fixture is available with no
+conftest setup — one fresh `MockRouter` per test:
+
+```python
+def test_get_user(client: UcServiceClient, mock_router: MockRouter) -> None:
+    mock_router.get("https://uc.test/users/1").return_value = ok_response(user)
+```
+
+Disable it for a run with `-p no:zrun-test-utils`.
+
 ## Installation
 
 Part of the zrun uv workspace. A member package that wants these helpers in its tests declares them in the dev dependency group with a workspace source (see `packages/uc-api/pyproject.toml` for a live example):

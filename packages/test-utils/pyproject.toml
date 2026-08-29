@@ -5,7 +5,11 @@ description = "Shared test utilities and fixtures for zrun platform"
 requires-python = ">=3.14"
 dependencies = [
     "httpx2",
+    "pytest",
 ]
+
+[project.entry-points.pytest11]
+zrun-test-utils = "zrun_test_utils.plugin"
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]

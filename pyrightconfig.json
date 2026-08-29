@@ -31,6 +31,7 @@
     "packages/auth/src",
     "packages/core/src",
     "packages/flow-api/src",
+    "packages/test-utils/src",
     "packages/uc-api/src"
   ]
 }
