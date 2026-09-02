@@ -230,7 +230,6 @@ class BaseServiceClient:
         response_model: type[T] | None,
     ) -> T:
         """Wrap _request_once with exponential-backoff retry."""
-        result: T | None = None
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(self._max_retries),
             wait=wait_exponential(
@@ -249,7 +248,9 @@ class BaseServiceClient:
                         self._max_retries,
                         extra={"service": self.service_name},
                     )
-                result = await self._request_once(
+                # Returns on success; tenacity retries retriable exceptions
+                # and re-raises everything else (reraise=True).
+                return await self._request_once(
                     method,
                     path,
                     headers,
@@ -257,10 +258,8 @@ class BaseServiceClient:
                     params,
                     response_model,
                 )
-        # The loop always returns inside `with attempt:` or raises.
-        # This assert satisfies type checkers.
-        assert result is not None
-        return result
+        # Unreachable: the loop either returns or re-raises.
+        raise ServiceCallError("retry loop exited without a result")  # pragma: no cover
 
     @staticmethod
     @overload
@@ -270,14 +269,26 @@ class BaseServiceClient:
 
     @staticmethod
     @overload
+    def _parse_response(response: httpx2.Response, response_model: type[None]) -> None: ...
+
+    @staticmethod
+    @overload
     def _parse_response(response: httpx2.Response, response_model: type[T]) -> T: ...
 
     @staticmethod
     def _parse_response(
         response: httpx2.Response,
         response_model: type[T] | None = None,
-    ) -> T | httpx2.Response:
-        """Parse response body into a model, or return raw response."""
+    ) -> T | httpx2.Response | None:
+        """Parse response body into a model.
+
+        - ``response_model=None``: escape hatch, returns the raw ``httpx2.Response``.
+        - ``response_model=type(None)`` (i.e. ``-> None``): no-content endpoints
+          such as 204; returns ``None`` without touching the (empty) body.
+        - Otherwise: parse the JSON body into the model.
+        """
         if response_model is None:
             return response
+        if response_model is type(None):
+            return None
         return _type_adapter(response_model).validate_python(response.json())

@@ -539,6 +539,11 @@ dependencies = [
     { name = "tenacity" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "zrun-test-utils" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
@@ -546,6 +551,9 @@ requires-dist = [
     { name = "pydantic-settings" },
     { name = "tenacity" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "zrun-test-utils", editable = "packages/test-utils" }]
 
 [[package]]
 name = "zrun-flow"

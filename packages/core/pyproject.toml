@@ -16,3 +16,11 @@ build-backend = "uv_build"
 
 [tool.uv.build-backend]
 module-name = "zrun.core"
+
+[dependency-groups]
+dev = [
+    "zrun-test-utils",
+]
+
+[tool.uv.sources]
+zrun-test-utils = { workspace = true }

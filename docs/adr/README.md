@@ -9,6 +9,7 @@
 - [0003 - Centralized version constraints at the workspace root](./0003-centralized-version-constraints-at-workspace-root.md)(现行)
 - [0004 - Self-built MockRouter replacing respx](./0004-mock-router-replacing-respx.md)(现行)
 - [0005 - Migrate HTTP stack from httpx to httpx2](./0005-migrate-http-stack-from-httpx-to-httpx2.md)(现行)
+- [0006 - Feign decorator fail-fast validation + PATCH for partial updates](./0006-feign-decorator-fail-fast-validation.md)(现行)
 
 ## 写作规范
 
