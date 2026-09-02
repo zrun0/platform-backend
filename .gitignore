@@ -23,3 +23,5 @@ build/
 # Claude Code
 .claude/plans/
 .claude/*.log
+.git-workflow/
+
