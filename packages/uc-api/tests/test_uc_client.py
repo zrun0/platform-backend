@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
+import json
+
+import httpx2
 import pytest
 from zrun_test_utils import MockRouter
 from zrun_test_utils.helpers import error_response, ok_response
@@ -9,7 +13,7 @@ from zrun_test_utils.helpers import error_response, ok_response
 from zrun.core.errors import ServiceNotFoundError
 from zrun.core.http.context import RequestContext
 from zrun.uc_api.client import UcServiceClient
-from zrun.uc_api.models import UserCreate, UserResponse
+from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 BASE_URL = "https://uc.test"
 
@@ -136,3 +140,54 @@ async def test_context_headers_propagated(client: UcServiceClient, mock_router: 
     headers = route.calls.last.request.headers
     assert headers.get("Authorization") == "Bearer tok"
     assert headers.get("X-Request-ID") == "req-abc"
+
+
+@pytest.mark.asyncio
+async def test_delete_user_returns_none_on_204(
+    client: UcServiceClient, mock_router: MockRouter
+) -> None:
+    """`-> None` delete on a 204 response must return None (no body parsing)."""
+    mock_router.delete(f"{BASE_URL}/users/user_1").return_value = httpx2.Response(204)
+
+    result = await client.delete_user("user_1")
+
+    assert result is None
+
+
+@pytest.mark.asyncio
+async def test_update_user_uses_patch_with_partial_body(
+    client: UcServiceClient, mock_router: MockRouter
+) -> None:
+    """Partial updates go over PATCH and only set fields are serialized."""
+    route = mock_router.patch(f"{BASE_URL}/users/user_1")
+    route.return_value = ok_response(
+        {
+            "id": "user_1",
+            "username": "alice",
+            "email": "new@example.com",
+            "status": "active",
+            "created_at": "2024-01-01T00:00:00Z",
+            "updated_at": "2024-01-02T00:00:00Z",
+        }
+    )
+
+    result = await client.update_user("user_1", UserUpdate(email="new@example.com"))
+
+    request = route.calls.last.request
+    assert request.method == "PATCH"
+    assert json.loads(request.content) == {"email": "new@example.com"}
+    assert result.email == "new@example.com"
+
+
+def test_all_endpoints_have_valid_specs() -> None:
+    """Every declared endpoint must carry a validated EndpointSpec.
+
+    Fail-fast guard: decoration-time validation (path placeholders, body
+    params, return annotations) runs at import, and this asserts every
+    endpoint method actually went through a decorator.
+    """
+    for _name, func in inspect.getmembers(UcServiceClient, inspect.iscoroutinefunction):
+        if func.__qualname__.startswith("UcServiceClient."):
+            assert getattr(func, "__endpoint_spec__", None) is not None, (
+                f"{func.__qualname__} is not decorated"
+            )

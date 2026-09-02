@@ -76,7 +76,7 @@ def create_user(
     return user
 
 
-@router.put("/users/{user_id}", response_model=UserResponse)
+@router.patch("/users/{user_id}", response_model=UserResponse)
 def update_user(
     user_id: str,
     payload: UserUpdate,
@@ -87,10 +87,7 @@ def update_user(
         raise HTTPException(status_code=404, detail="User not found")
     existing = _USERS[user_id]
     update_data = payload.model_dump(exclude_unset=True)
-    updated = UserResponse(
-        **{**existing.model_dump(), **update_data},
-        updated_at=datetime.now(UTC),
-    )
+    updated = existing.model_copy(update={**update_data, "updated_at": datetime.now(UTC)})
     _USERS[user_id] = updated
     return updated
 
