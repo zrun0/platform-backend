@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import inspect
 from datetime import UTC, datetime
 
+import httpx2
 import pytest
 from zrun_test_utils import MockRouter
 from zrun_test_utils.helpers import ok_response
@@ -148,3 +150,24 @@ async def test_context_headers_propagated(
     assert headers.get("X-Request-ID") == "req-123"
     assert headers.get("X-Trace-ID") == "trace-456"
     assert headers.get("X-User-ID") == "user-1"
+
+
+@pytest.mark.asyncio
+async def test_delete_flow_returns_none_on_204(
+    client: FlowServiceClient, mock_router: MockRouter
+) -> None:
+    """`-> None` delete on a 204 response must return None (no body parsing)."""
+    mock_router.delete(f"{BASE_URL}/flows/flow_1").return_value = httpx2.Response(204)
+
+    result = await client.delete_flow("flow_1")
+
+    assert result is None
+
+
+def test_all_endpoints_have_valid_specs() -> None:
+    """Every declared endpoint must carry a validated EndpointSpec."""
+    for _name, func in inspect.getmembers(FlowServiceClient, inspect.iscoroutinefunction):
+        if func.__qualname__.startswith("FlowServiceClient."):
+            assert getattr(func, "__endpoint_spec__", None) is not None, (
+                f"{func.__qualname__} is not decorated"
+            )

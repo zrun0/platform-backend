@@ -57,7 +57,7 @@ def create_flow(payload: FlowCreate, _user: CurrentUser) -> FlowResponse:
     return flow
 
 
-@router.put("/flows/{flow_id}", response_model=FlowResponse)
+@router.patch("/flows/{flow_id}", response_model=FlowResponse)
 def update_flow(
     flow_id: str,
     payload: FlowUpdate,
@@ -68,10 +68,7 @@ def update_flow(
         raise HTTPException(status_code=404, detail="Flow not found")
     existing = _FLOWS[flow_id]
     update_data = payload.model_dump(exclude_unset=True)
-    updated = FlowResponse(
-        **{**existing.model_dump(), **update_data},
-        updated_at=datetime.now(UTC),
-    )
+    updated = existing.model_copy(update={**update_data, "updated_at": datetime.now(UTC)})
     _FLOWS[flow_id] = updated
     return updated
 

@@ -6,7 +6,7 @@ from typing import Any
 
 from zrun.core.http.base_client import BaseServiceClient
 from zrun.core.http.context import RequestContext
-from zrun.core.http.feign import delete, get, post, put
+from zrun.core.http.feign import delete, get, patch, post
 from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 
@@ -63,7 +63,7 @@ class UcServiceClient(BaseServiceClient):
         """
         ...
 
-    @put("/users/{user_id}")
+    @patch("/users/{user_id}")
     async def update_user(
         self,
         user_id: str,

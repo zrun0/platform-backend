@@ -6,7 +6,7 @@ from typing import Any
 
 from zrun.core.http.base_client import BaseServiceClient
 from zrun.core.http.context import RequestContext
-from zrun.core.http.feign import delete, get, post, put
+from zrun.core.http.feign import delete, get, patch, post
 from zrun.flow_api.models import FlowCreate, FlowResponse, FlowUpdate
 
 
@@ -53,7 +53,7 @@ class FlowServiceClient(BaseServiceClient):
         """
         ...
 
-    @put("/flows/{flow_id}")
+    @patch("/flows/{flow_id}")
     async def update_flow(
         self,
         flow_id: str,
