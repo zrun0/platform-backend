@@ -15,8 +15,12 @@ _HEADER_REQUEST_ID = "X-Request-ID"
 logger = logging.getLogger(__name__)
 
 # Client-supplied request IDs are echoed into logs, downstream headers, and
-# responses, so only accept a conservative unreserved-character token.
-_REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,128}")
+# responses, so only accept single-line printable tokens. The charset is
+# RFC 9110 tchar plus ':' (LB/edge-generated IDs such as "edge-1:57f6a2")
+# and '=' (base64 padding); CR/LF, spaces, and non-ASCII stay excluded, so
+# log and header injection remain impossible. Length capped well below the
+# h11 header-size limit.
+_REQUEST_ID_PATTERN = re.compile(r"[!#$%&'*+.=:^_`|~A-Za-z0-9-]{1,512}")
 
 
 def sanitize_request_id(raw: str | None) -> str:
@@ -30,10 +34,11 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     """Read or generate a validated request ID and attach it to request state.
 
     If the incoming request carries an `X-Request-ID` header, its value is
-    used only when it matches a conservative unreserved-character token;
-    anything else (missing, oversized, unusual characters) is replaced with a
-    fresh UUID4 to prevent log or header injection. The ID is also set on the
-    response so callers can correlate logs and traces.
+    used only when it matches a printable single-line token (RFC 9110 tchar
+    plus ':'); anything else (missing, oversized, whitespace, control or
+    non-ASCII characters) is replaced with a fresh UUID4 to prevent log or
+    header injection. The ID is also set on the response so callers can
+    correlate logs and traces.
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:

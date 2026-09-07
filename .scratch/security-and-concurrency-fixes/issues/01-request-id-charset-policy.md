@@ -1,6 +1,6 @@
 # X-Request-ID charset may be too narrow for real-world client IDs
 
-Status: ready-for-human
+Status: resolved
 
 ## Background
 
@@ -25,3 +25,12 @@ about the compatibility window.
 
 Whatever charset is chosen must stay single-line and header-safe; the
 decision needs a human call on which real-world ID formats we must honor.
+
+## Resolution
+
+Decision (2026-09-07): option 1, widened. The sanitizer now accepts any
+printable single-line token — RFC 9110 tchar plus `:` (for LB-style
+`edge-1:57f6a2` IDs) — with the length cap raised from 128 to 512. CR/LF,
+spaces, and non-ASCII remain rejected, so log/header injection stays
+impossible; base64 and colon-separated real-world IDs now pass through and
+echo unchanged.

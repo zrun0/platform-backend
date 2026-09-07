@@ -22,7 +22,7 @@ def _echo_app() -> TestClient:
 
 
 def test_valid_request_id_preserved() -> None:
-    """A conservative unreserved-character token passes through unchanged."""
+    """A printable single-line token passes through unchanged."""
     with _echo_app() as client:
         response = client.get("/echo", headers={"X-Request-ID": "abc-DEF_123.~x"})
 
@@ -30,9 +30,19 @@ def test_valid_request_id_preserved() -> None:
     assert response.headers["X-Request-ID"] == "abc-DEF_123.~x"
 
 
+def test_real_world_request_id_formats_preserved() -> None:
+    """base64 (with padding) and colon-separated edge IDs pass through."""
+    for good in ("YGBg+2==", "edge-1:57f6a2", "a*b#c$d%e&f'g!h"):
+        with _echo_app() as client:
+            response = client.get("/echo", headers={"X-Request-ID": good})
+
+        assert response.json()["request_id"] == good
+        assert response.headers["X-Request-ID"] == good
+
+
 def test_invalid_request_id_replaced() -> None:
-    """Spaces, control characters, and oversized IDs are replaced."""
-    for bad in ("bad request id", "abc\ndef", "x" * 129, "id;rm -rf"):
+    """Spaces, control characters, non-tokens, and oversized IDs are replaced."""
+    for bad in ("bad request id", "abc\ndef", "x" * 513, "id;rm -rf", "id,with,commas"):
         with _echo_app() as client:
             response = client.get("/echo", headers={"X-Request-ID": bad})
 
@@ -52,5 +62,6 @@ def test_missing_request_id_generated() -> None:
 def test_sanitize_request_id_unit() -> None:
     """Direct checks of the sanitizer's boundary behavior."""
     assert sanitize_request_id("valid-id.1_~") == "valid-id.1_~"
+    assert sanitize_request_id("YGBg+2==") == "YGBg+2=="
     assert sanitize_request_id(None) != ""
     UUID(sanitize_request_id("injection\tattempt"))
