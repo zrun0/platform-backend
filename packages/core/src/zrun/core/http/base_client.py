@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import logging
+from dataclasses import replace
 from functools import cache
 from typing import Any, TypeVar, cast, overload
 
@@ -30,6 +31,7 @@ from zrun.core.errors import (
 )
 from zrun.core.http.context import RequestContext
 from zrun.core.http.typehints import ResponseModel, unwrap_optional
+from zrun.core.settings import ConnectionPoolSettings
 
 logger = logging.getLogger(__name__)
 
@@ -115,20 +117,33 @@ class BaseServiceClient:
         *,
         service_name: str,
         timeout: float = 10.0,
-        max_connections: int = 100,
-        max_keepalive_connections: int = 20,
+        max_connections: int | None = None,
+        max_keepalive_connections: int | None = None,
+        pool: ConnectionPoolSettings | None = None,
         max_retries: int = 3,
         retry_min_delay: float = 0.1,
         retry_max_delay: float = 5.0,
         transport: httpx2.AsyncBaseTransport | None = None,
     ) -> None:
+        if pool is not None and (
+            max_connections is not None or max_keepalive_connections is not None
+        ):
+            msg = "pass either pool= or max_connections=/max_keepalive_connections=, not both"
+            raise ValueError(msg)
+        if pool is None:
+            pool = ConnectionPoolSettings()
+        if max_connections is not None:
+            pool = replace(pool, max_connections=max_connections)
+        if max_keepalive_connections is not None:
+            pool = replace(pool, max_keepalive_connections=max_keepalive_connections)
+
         self.service_name = service_name
         self._max_retries = max_retries
         self._retry_min_delay = retry_min_delay
         self._retry_max_delay = retry_max_delay
         limits = httpx2.Limits(
-            max_connections=max_connections,
-            max_keepalive_connections=max_keepalive_connections,
+            max_connections=pool.max_connections,
+            max_keepalive_connections=pool.max_keepalive_connections,
         )
         if transport is None:
             # Internal service-to-service traffic must never detour through

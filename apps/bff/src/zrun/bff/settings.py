@@ -2,6 +2,8 @@
 
 from pydantic_settings import BaseSettings
 
+from zrun.core.settings import ConnectionPoolSettings
+
 
 class Settings(BaseSettings):
     """Runtime settings for the BFF service."""
@@ -17,6 +19,5 @@ class Settings(BaseSettings):
     flow_timeout: float = 30.0
     uc_timeout: float = 10.0
 
-    # Connection pool settings.
-    max_connections: int = 100
-    max_keepalive_connections: int = 20
+    # Shared connection pool settings for all downstream clients.
+    connection_pool: ConnectionPoolSettings = ConnectionPoolSettings()

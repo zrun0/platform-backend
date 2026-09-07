@@ -14,7 +14,7 @@ from zrun.flow_api.models import FlowCreate, FlowResponse, FlowUpdate
 
 router = APIRouter()
 
-# In-memory store for demonstration purposes.
+# SCAFFOLD: in-memory store for demo — replace with real persistence (DB + repository layer)
 _FLOWS: dict[str, FlowResponse] = {}
 
 # Sync routes run on a threadpool, so every check-then-read/write sequence

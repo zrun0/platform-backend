@@ -3,5 +3,5 @@
 
 def get_current_user() -> str:
     """Resolve the current user from the request. Placeholder."""
-    # TODO: implement token validation
+    # SCAFFOLD: placeholder — replace with JWT token validation + user resolution
     return "anonymous"

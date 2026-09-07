@@ -107,10 +107,10 @@ async def get_flow_with_owner(
 
     Demonstrates a BFF pattern: call multiple downstream services
     and combine the results.
+
+    SCAFFOLD: owner lookup not yet wired — flow model has no owner_id field yet.
     """
     flow = await flow_client.get_flow(flow_id, ctx=ctx)
-    # In a real app, the flow would have an owner_id; here we demo
-    # the pattern by fetching a user alongside the flow.
     return {
         "flow": flow.model_dump(),
         "owner": None,
