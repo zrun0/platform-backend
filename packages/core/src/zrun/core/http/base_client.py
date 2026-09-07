@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import json
 import logging
-import types
 from functools import cache
 from typing import Any, TypeVar, cast, overload
 
@@ -30,7 +29,7 @@ from zrun.core.errors import (
     ServiceUnavailableError,
 )
 from zrun.core.http.context import RequestContext
-from zrun.core.http.typehints import unwrap_optional
+from zrun.core.http.typehints import ResponseModel, unwrap_optional
 
 logger = logging.getLogger(__name__)
 
@@ -127,18 +126,23 @@ class BaseServiceClient:
         self._max_retries = max_retries
         self._retry_min_delay = retry_min_delay
         self._retry_max_delay = retry_max_delay
+        limits = httpx2.Limits(
+            max_connections=max_connections,
+            max_keepalive_connections=max_keepalive_connections,
+        )
+        if transport is None:
+            # Internal service-to-service traffic must never detour through
+            # an environment/system HTTP proxy (breaks localhost calls on
+            # machines with a proxy configured). Passing an explicit
+            # transport disables the client's env-proxy lookup, while the
+            # transport itself keeps trust_env=True so CA bundles injected
+            # via SSL_CERT_FILE / SSL_CERT_DIR still load.
+            transport = httpx2.AsyncHTTPTransport(trust_env=True, limits=limits)
         self._client = httpx2.AsyncClient(
             base_url=base_url,
             timeout=timeout,
             transport=transport,
-            # Internal service-to-service traffic must never detour through
-            # an environment/system HTTP proxy (breaks localhost calls on
-            # developer machines with a system proxy configured).
-            trust_env=False,
-            limits=httpx2.Limits(
-                max_connections=max_connections,
-                max_keepalive_connections=max_keepalive_connections,
-            ),
+            limits=limits,
         )
 
     async def aclose(self) -> None:
@@ -151,7 +155,7 @@ class BaseServiceClient:
         path: str,
         *,
         ctx: RequestContext | None = None,
-        response_model: type[T] | types.UnionType | None = None,
+        response_model: ResponseModel[T] = None,
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
@@ -210,7 +214,7 @@ class BaseServiceClient:
         headers: dict[str, str],
         json_body: dict[str, Any] | None,
         params: dict[str, Any] | None,
-        response_model: type[T] | types.UnionType | None,
+        response_model: ResponseModel[T],
     ) -> T:
         try:
             response = await self._client.request(
@@ -248,7 +252,7 @@ class BaseServiceClient:
         headers: dict[str, str],
         json_body: dict[str, Any] | None,
         params: dict[str, Any] | None,
-        response_model: type[T] | types.UnionType | None,
+        response_model: ResponseModel[T],
     ) -> T:
         """Wrap _request_once with exponential-backoff retry."""
         async for attempt in AsyncRetrying(
@@ -305,7 +309,7 @@ class BaseServiceClient:
     @staticmethod
     def _parse_response(
         response: httpx2.Response,
-        response_model: type[T] | types.UnionType | None = None,
+        response_model: ResponseModel[T] = None,
     ) -> Any:
         """Parse response body into a model.
 

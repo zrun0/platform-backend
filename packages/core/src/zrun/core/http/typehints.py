@@ -6,7 +6,11 @@ import types
 import typing
 from typing import Any
 
-_NONE_TYPE = type(None)
+NONE_TYPE = type(None)
+
+# A response model: a Pydantic model class, or `Model | None` for Optional
+# contracts where an empty or JSON-null body means "no result".
+type ResponseModel[T] = type[T] | types.UnionType | None
 
 
 def unwrap_optional(annotation: Any) -> tuple[Any, bool]:
@@ -17,7 +21,7 @@ def unwrap_optional(annotation: Any) -> tuple[Any, bool]:
     """
     origin = typing.get_origin(annotation)
     is_union = origin is typing.Union or origin is types.UnionType
-    if is_union and _NONE_TYPE in typing.get_args(annotation):
-        inner = next(a for a in typing.get_args(annotation) if a is not _NONE_TYPE)
+    if is_union and NONE_TYPE in typing.get_args(annotation):
+        inner = next(a for a in typing.get_args(annotation) if a is not NONE_TYPE)
         return inner, True
     return annotation, False

@@ -38,7 +38,8 @@ def me(user: CurrentUser) -> dict[str, str]:
 @router.get("/flows", response_model=list[FlowResponse])
 def list_flows() -> list[FlowResponse]:
     """List all flows."""
-    return list(_FLOWS.values())
+    with _FLOWS_LOCK:
+        return list(_FLOWS.values())
 
 
 @router.get("/flows/{flow_id}", response_model=FlowResponse)

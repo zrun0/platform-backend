@@ -42,7 +42,12 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         if raw_id is not None and request_id != raw_id:
             # Replacing a caller-supplied ID silently breaks their log
             # correlation; leave a diagnostic trace of the substitution.
-            logger.warning("Replaced invalid X-Request-ID %r with a generated UUID", raw_id)
+            # Truncate: the raw value is attacker-controllable and can be
+            # kilobytes long, and this fires on every offending request.
+            logger.warning(
+                "Replaced invalid X-Request-ID %r with a generated UUID",
+                raw_id[:64],
+            )
         request.state.request_id = request_id
 
         response = await call_next(request)

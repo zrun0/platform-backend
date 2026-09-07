@@ -41,6 +41,10 @@ def map_service_error_to_status(exc: ServiceCallError) -> int:
         return 404
     if isinstance(exc, ServiceBadRequestError):
         return exc.status_code or 400
+    if isinstance(exc, ServiceResponseError):
+        # A 2xx with an unreadable body: not an outage, but 502 (invalid
+        # gateway payload) is the closest RFC status.
+        return 502
     return 502
 
 
@@ -67,11 +71,13 @@ def register_service_error_handlers(app: FastAPI) -> None:
     ) -> JSONResponse:
         if isinstance(exc, ServiceResponseError):
             # Contract violations are deterministic bugs, not load events:
-            # log loudly so they stay distinguishable from outages.
+            # log loudly (with a truncated body) so they stay
+            # distinguishable from outages and diagnosable per endpoint.
             logger.error(
-                "Downstream %s violated the response contract: %s",
+                "Downstream %s violated the response contract: %s; body=%r",
                 exc.service_name,
                 exc.message,
+                (exc.response_body or "")[:1024],
             )
         status = map_service_error_to_status(exc)
         return JSONResponse(

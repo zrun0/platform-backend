@@ -52,8 +52,10 @@ async def test_optional_model_empty_body_maps_to_none(
 async def test_optional_model_json_null_body_maps_to_none(
     client: BaseServiceClient, mock_router: MockRouter
 ) -> None:
-    """`Model | None` maps a literal JSON null body to None."""
-    mock_router.get(f"{BASE_URL}/toys/1").return_value = ok_response(None)
+    """`Model | None` maps a literal JSON null body (b"null") to None."""
+    # A literal null body, distinct from an empty one: json=None in the
+    # Response constructor is the no-body sentinel, so use raw content.
+    mock_router.get(f"{BASE_URL}/toys/1").return_value = httpx2.Response(200, content=b"null")
 
     result = await client.request("GET", "/toys/1", response_model=Toy | None)
 

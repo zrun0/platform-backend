@@ -39,7 +39,8 @@ def me(user: CurrentUser) -> dict[str, str]:
 @router.get("/users", response_model=list[UserResponse])
 def list_users() -> list[UserResponse]:
     """List all users."""
-    return list(_USERS.values())
+    with _USERS_LOCK:
+        return list(_USERS.values())
 
 
 @router.get("/users/by-username", response_model=UserResponse)

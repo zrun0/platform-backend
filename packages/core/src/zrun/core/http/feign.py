@@ -33,7 +33,6 @@ from __future__ import annotations
 
 import inspect
 import re
-import types
 import typing
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -42,6 +41,8 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote
 
 from pydantic import BaseModel
+
+from zrun.core.http.typehints import NONE_TYPE, ResponseModel
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -158,11 +159,9 @@ def _build_spec(method: str, path: str, func: Callable[..., Any]) -> EndpointSpe
     )
 
 
-_NONE_TYPE = type(None)
-
 # Per-method resolved return contract, computed once on first call and
 # cached on the wrapper (forward refs resolve after module import).
-_ReturnContract = tuple[bool, type[Any] | types.UnionType | None]
+_ReturnContract = tuple[bool, ResponseModel[Any]]
 
 
 def _resolve_return_contract(func: Callable[..., Any]) -> _ReturnContract:
@@ -172,7 +171,7 @@ def _resolve_return_contract(func: Callable[..., Any]) -> _ReturnContract:
     model, `-> Model | None` keeps the union for Optional body handling.
     """
     declared = typing.get_type_hints(func).get("return", None)
-    if declared is _NONE_TYPE:
+    if declared is NONE_TYPE:
         return True, None
     if declared is None:
         return False, None
