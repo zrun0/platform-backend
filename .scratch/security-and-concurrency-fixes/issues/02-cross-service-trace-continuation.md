@@ -1,6 +1,6 @@
 # Trace ID continuation across services is structurally impossible
 
-Status: needs-triage
+Status: resolved
 
 ## Background
 
@@ -30,3 +30,20 @@ per-hop code:
   `request.state.trace_id`.
 
 Needs a design decision (ADR candidate) before implementation.
+
+## Resolution
+
+Resolved (2026-09-07) with the boundary-aware design:
+
+- `RequestIDMiddleware` now also resolves a trace ID onto
+  `request.state.trace_id`. With `trust_inbound_trace=True` (internal
+  services, set via `create_basic_app(..., trust_inbound_trace=True)` in
+  uc/flow), a validated inbound `X-Trace-ID` is continued so the BFF's
+  trace joins across hops; invalid values are replaced with a fresh UUID.
+- The external edge (BFF) keeps the default `False`: client-supplied
+  traces are never continued, a fresh UUID is minted per request.
+- `RequestContext.from_request` reads `request.state.trace_id` (never the
+  raw header), mirroring request_id handling.
+
+The BFF mints T1 -> forwards X-Trace-ID: T1 -> uc/flow continue T1 in
+their state, so future downstream calls and span export share one trace.

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import threading
 from datetime import UTC, datetime
-from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 
 from zrun.auth.types import CurrentUser
+from zrun.core.model_utils import partial_update_dict
 from zrun.flow_api.models import FlowCreate, FlowResponse, FlowUpdate
 
 router = APIRouter()
@@ -82,15 +82,10 @@ def update_flow(
         if flow_id not in _FLOWS:
             raise HTTPException(status_code=404, detail="Flow not found")
         existing = _FLOWS[flow_id]
-        update_data: dict[str, Any] = payload.model_dump(exclude_unset=True)
-        # Explicit null semantics: the nullable `description` clears its
-        # value; required fields (name, status) treat null as omitted,
-        # since storing None would fail validation.
-        for key in ("name", "status"):
-            if update_data.get(key) is None:
-                update_data.pop(key, None)
-        # model_copy(update=) overlays already-validated fields (payload
-        # constraints were checked at parse time), so no re-validation.
+        # Explicit null clears nullable fields (description) and is treated
+        # as omitted for required ones (name, status) — derived from the
+        # FlowUpdate schema, not a hand-maintained field list.
+        update_data = partial_update_dict(payload, FlowResponse)
         update_data["updated_at"] = datetime.now(UTC)
         updated = existing.model_copy(update=update_data)
         _FLOWS[flow_id] = updated

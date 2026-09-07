@@ -24,6 +24,7 @@ def create_basic_app(
     router: APIRouter,
     *,
     lifespan: Lifespan | None = None,
+    trust_inbound_trace: bool = False,
 ) -> FastAPI:
     """Create a basic FastAPI application with standard setup.
 
@@ -35,6 +36,10 @@ def create_basic_app(
         settings: Application settings with at least a service_name field
         router: Main API router to include in the application
         lifespan: Optional lifespan context manager for startup/shutdown hooks
+        trust_inbound_trace: Continue a validated inbound X-Trace-ID so
+            traces join across hops. Only for internal services reached
+            from the private network; the external edge (BFF) keeps the
+            default False and mints a fresh trace per request.
 
     Returns:
         Configured FastAPI application ready for use
@@ -47,7 +52,7 @@ def create_basic_app(
     app.state.settings = settings
 
     # Standard middleware - always included
-    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(RequestIDMiddleware, trust_inbound_trace=trust_inbound_trace)
 
     app.include_router(router)
     return app

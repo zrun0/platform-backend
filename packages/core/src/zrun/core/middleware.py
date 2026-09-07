@@ -1,4 +1,4 @@
-"""Middleware for request ID propagation."""
+"""Middleware for request ID and trace ID propagation."""
 
 from __future__ import annotations
 
@@ -9,8 +9,10 @@ from uuid import uuid4
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
 from starlette.responses import Response
+from starlette.types import ASGIApp
 
 _HEADER_REQUEST_ID = "X-Request-ID"
+_HEADER_TRACE_ID = "X-Trace-ID"
 
 logger = logging.getLogger(__name__)
 
@@ -20,30 +22,39 @@ logger = logging.getLogger(__name__)
 # and '=' (base64 padding); CR/LF, spaces, and non-ASCII stay excluded, so
 # log and header injection remain impossible. Length capped well below the
 # h11 header-size limit.
-_REQUEST_ID_PATTERN = re.compile(r"[!#$%&'*+.=:^_`|~A-Za-z0-9-]{1,512}")
+_TOKEN_PATTERN = re.compile(r"[!#$%&'*+.=:^_`|~A-Za-z0-9-]{1,512}")
 
 
-def sanitize_request_id(raw: str | None) -> str:
-    """Return the raw request ID if it is safe, else a fresh UUID4."""
-    if raw and _REQUEST_ID_PATTERN.fullmatch(raw):
+def sanitize_header_token(raw: str | None) -> str:
+    """Return the raw header token if it is safe, else a fresh UUID4."""
+    if raw and _TOKEN_PATTERN.fullmatch(raw):
         return raw
     return str(uuid4())
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Read or generate a validated request ID and attach it to request state.
+    """Read or generate a request ID and trace ID, attached to request state.
 
-    If the incoming request carries an `X-Request-ID` header, its value is
-    used only when it matches a printable single-line token (RFC 9110 tchar
-    plus ':'); anything else (missing, oversized, whitespace, control or
-    non-ASCII characters) is replaced with a fresh UUID4 to prevent log or
-    header injection. The ID is also set on the response so callers can
-    correlate logs and traces.
+    Request IDs: an inbound `X-Request-ID` is used only when it matches a
+    printable single-line token; anything else (missing, oversized,
+    whitespace, control or non-ASCII characters) is replaced with a fresh
+    UUID4 to prevent log or header injection. The ID is also set on the
+    response so callers can correlate logs and traces.
+
+    Trace IDs: with ``trust_inbound_trace`` (internal services reached only
+    from the private network), a valid inbound `X-Trace-ID` is continued so
+    traces join across service hops; without it (the external edge, e.g.
+    the BFF), a fresh UUID4 is minted per request and client-supplied
+    traces are never continued.
     """
+
+    def __init__(self, app: ASGIApp, *, trust_inbound_trace: bool = False) -> None:
+        super().__init__(app)
+        self._trust_inbound_trace = trust_inbound_trace
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         raw_id = request.headers.get(_HEADER_REQUEST_ID)
-        request_id = sanitize_request_id(raw_id)
+        request_id = sanitize_header_token(raw_id)
         if raw_id is not None and request_id != raw_id:
             # Replacing a caller-supplied ID silently breaks their log
             # correlation; leave a diagnostic trace of the substitution.
@@ -54,6 +65,12 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
                 raw_id[:64],
             )
         request.state.request_id = request_id
+
+        if self._trust_inbound_trace:
+            trace_id = sanitize_header_token(request.headers.get(_HEADER_TRACE_ID))
+        else:
+            trace_id = str(uuid4())
+        request.state.trace_id = trace_id
 
         response = await call_next(request)
 

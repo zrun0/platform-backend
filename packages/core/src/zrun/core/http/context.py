@@ -34,9 +34,10 @@ class RequestContext:
 
         - request_id: taken from ``request.state.request_id`` (set and
           validated by RequestIDMiddleware); never from the raw inbound header.
-        - trace_id: generated fresh for every request. The inbound
-          ``X-Trace-ID`` header is ignored: there is no trusted inbound
-          trace to continue at this boundary.
+        - trace_id: taken from ``request.state.trace_id``. RequestIDMiddleware
+          decides the trust boundary: internal services (trusted ingress)
+          continue a validated inbound trace, the external edge mints a
+          fresh one. The raw inbound ``X-Trace-ID`` header is never read.
         - user_id: only via the explicit ``user_id`` parameter, which
           callers must derive from authenticated identity.
 
@@ -47,7 +48,7 @@ class RequestContext:
         """
         auth_header = request.headers.get(_HEADER_AUTH)
         request_id = getattr(request.state, "request_id", None) or str(uuid4())
-        trace_id = str(uuid4())
+        trace_id = getattr(request.state, "trace_id", None) or str(uuid4())
         return cls(
             auth_token=auth_header,
             request_id=request_id,

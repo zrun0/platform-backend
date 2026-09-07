@@ -11,7 +11,7 @@ from zrun.core.http.context import RequestContext
 from zrun.core.middleware import RequestIDMiddleware
 
 
-def _app(*, with_middleware: bool) -> TestClient:
+def _app(*, with_middleware: bool, trust_inbound_trace: bool = False) -> TestClient:
     app = FastAPI()
 
     @app.get("/ctx")
@@ -20,7 +20,7 @@ def _app(*, with_middleware: bool) -> TestClient:
         return context.to_headers()
 
     if with_middleware:
-        app.add_middleware(RequestIDMiddleware)
+        app.add_middleware(RequestIDMiddleware, trust_inbound_trace=trust_inbound_trace)
     return TestClient(app)
 
 
@@ -36,6 +36,14 @@ def test_from_request_ignores_inbound_user_and_trace_headers() -> None:
     assert headers["X-User-ID"] == "derived-user"
     assert headers["X-Trace-ID"] != "evil-trace"
     UUID(headers["X-Trace-ID"])
+
+
+def test_from_request_continues_trusted_inbound_trace() -> None:
+    """With trusted ingress, the middleware-validated trace flows downstream."""
+    with _app(with_middleware=True, trust_inbound_trace=True) as client:
+        response = client.get("/ctx", headers={"X-Trace-ID": "trace-hop-1"})
+
+    assert response.json()["X-Trace-ID"] == "trace-hop-1"
 
 
 def test_from_request_reads_state_request_id() -> None:

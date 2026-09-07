@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import threading
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
 
 from zrun.auth.types import CurrentUser
+from zrun.core.model_utils import partial_update_dict
 from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter()
@@ -100,14 +101,9 @@ def update_user(
         if user_id not in _USERS:
             raise HTTPException(status_code=404, detail="User not found")
         existing = _USERS[user_id]
-        # Explicit nulls are treated as omitted fields: every updatable
-        # field is required in the stored model, so keeping a null would
-        # fail validation instead of clearing the field.
-        update_data: dict[str, Any] = {
-            key: value
-            for key, value in payload.model_dump(exclude_unset=True).items()
-            if value is not None
-        }
+        # Explicit nulls are treated as omitted fields: no UserUpdate field
+        # is nullable, so nothing can be cleared (derived from the schema).
+        update_data = partial_update_dict(payload, UserResponse)
         new_username: str | None = update_data.get("username")
         if new_username is not None and new_username != existing.username:
             # Renames must keep the username index consistent and unique:

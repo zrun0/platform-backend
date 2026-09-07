@@ -1,4 +1,4 @@
-"""Tests for RequestIDMiddleware validation."""
+"""Tests for RequestIDMiddleware request/trace ID handling."""
 
 from __future__ import annotations
 
@@ -7,16 +7,19 @@ from uuid import UUID
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from zrun.core.middleware import RequestIDMiddleware, sanitize_request_id
+from zrun.core.middleware import RequestIDMiddleware, sanitize_header_token
 
 
-def _echo_app() -> TestClient:
+def _echo_app(*, trust_inbound_trace: bool = False) -> TestClient:
     app = FastAPI()
-    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(RequestIDMiddleware, trust_inbound_trace=trust_inbound_trace)
 
     @app.get("/echo")
     def echo(request: Request) -> dict[str, str]:
-        return {"request_id": getattr(request.state, "request_id", "")}
+        return {
+            "request_id": getattr(request.state, "request_id", ""),
+            "trace_id": getattr(request.state, "trace_id", ""),
+        }
 
     return TestClient(app)
 
@@ -59,9 +62,37 @@ def test_missing_request_id_generated() -> None:
     UUID(response.json()["request_id"])
 
 
-def test_sanitize_request_id_unit() -> None:
+def test_edge_mints_fresh_trace_id() -> None:
+    """Untrusted ingress (default): inbound traces are never continued."""
+    with _echo_app() as client:
+        response = client.get("/echo", headers={"X-Trace-ID": "evil-trace"})
+
+    trace_id = response.json()["trace_id"]
+    assert trace_id != "evil-trace"
+    UUID(trace_id)
+
+
+def test_trusted_ingress_continues_valid_trace_id() -> None:
+    """Internal services continue a validated inbound trace so hops join."""
+    with _echo_app(trust_inbound_trace=True) as client:
+        response = client.get("/echo", headers={"X-Trace-ID": "trace-1abc.~x"})
+
+    assert response.json()["trace_id"] == "trace-1abc.~x"
+
+
+def test_trusted_ingress_replaces_invalid_trace_id() -> None:
+    """Trusted ingress still sanitizes: garbage traces become fresh UUIDs."""
+    with _echo_app(trust_inbound_trace=True) as client:
+        response = client.get("/echo", headers={"X-Trace-ID": "evil trace\ninjected"})
+
+    trace_id = response.json()["trace_id"]
+    assert trace_id != "evil trace\ninjected"
+    UUID(trace_id)
+
+
+def test_sanitize_header_token_unit() -> None:
     """Direct checks of the sanitizer's boundary behavior."""
-    assert sanitize_request_id("valid-id.1_~") == "valid-id.1_~"
-    assert sanitize_request_id("YGBg+2==") == "YGBg+2=="
-    assert sanitize_request_id(None) != ""
-    UUID(sanitize_request_id("injection\tattempt"))
+    assert sanitize_header_token("valid-id.1_~") == "valid-id.1_~"
+    assert sanitize_header_token("YGBg+2==") == "YGBg+2=="
+    assert sanitize_header_token(None) != ""
+    UUID(sanitize_header_token("injection\tattempt"))

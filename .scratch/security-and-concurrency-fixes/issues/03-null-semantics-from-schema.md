@@ -1,6 +1,6 @@
 # PATCH/PUT null semantics should be derived from the model schema
 
-Status: needs-triage
+Status: resolved
 
 ## Background
 
@@ -30,3 +30,17 @@ fields".
 
 Tests to keep pinning both sides: flow `description` null clears, flow
 `name` null ignored, UC null ignored.
+
+## Resolution
+
+Resolved (2026-09-07): added `partial_update_dict` in
+`zrun.core.model_utils` — explicit nulls are kept for fields nullable
+in the **target (stored) model** — FlowResponse/UserResponse — and
+dropped for required ones. Nullability must come from the target model,
+not the payload model: request shapes use `X | None = None` to mean
+"may be omitted", which says nothing about whether the stored value may
+be null (this subtlety is pinned by tests). Both Flow and UC update routes now use it, so the
+"add a field, forget the tuple" corruption path is gone and the contract
+is documented in one place. Behavior is pinned by route tests (flow
+description null clears / name null ignored / UC null ignored) plus
+helper unit tests in `packages/core/tests/test_model_utils.py`.
