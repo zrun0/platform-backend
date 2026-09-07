@@ -15,7 +15,7 @@ from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 router = APIRouter()
 
-# In-memory store for demonstration purposes.
+# SCAFFOLD: in-memory store for demo — replace with real persistence (DB + repository layer)
 _USERS: dict[str, UserResponse] = {}
 _USERS_BY_USERNAME: dict[str, str] = {}
 

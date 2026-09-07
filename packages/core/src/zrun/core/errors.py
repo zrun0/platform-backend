@@ -82,8 +82,23 @@ class ServiceResponseError(ServiceCallError):
 class ServiceBadRequestError(ServiceCallError):
     """Raised when a downstream service returns a 4xx response."""
 
+    def __init__(
+        self,
+        message: str = "Bad request",
+        *,
+        service_name: str = "unknown",
+        status_code: int = 400,
+        response_body: str | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            service_name=service_name,
+            status_code=status_code,
+            response_body=response_body,
+        )
 
-class ServiceNotFoundError(ServiceBadRequestError):
+
+class ServiceNotFoundError(ServiceCallError):
     """Raised when a downstream service returns a 404 response."""
 
     def __init__(

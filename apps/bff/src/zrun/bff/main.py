@@ -36,14 +36,12 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     flow_client = FlowServiceClient(
         base_url=settings.flow_api_base_url,
         timeout=settings.flow_timeout,
-        max_connections=settings.max_connections,
-        max_keepalive_connections=settings.max_keepalive_connections,
+        pool=settings.connection_pool,
     )
     uc_client = UcServiceClient(
         base_url=settings.uc_api_base_url,
         timeout=settings.uc_timeout,
-        max_connections=settings.max_connections,
-        max_keepalive_connections=settings.max_keepalive_connections,
+        pool=settings.connection_pool,
     )
 
     app.state.clients = AppClients(flow=flow_client, uc=uc_client)

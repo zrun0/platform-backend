@@ -29,15 +29,13 @@ def make_bff_client(mock_router: MockRouter) -> Callable[[Settings], TestClient]
             flow=FlowServiceClient(
                 base_url=settings.flow_api_base_url,
                 timeout=settings.flow_timeout,
-                max_connections=settings.max_connections,
-                max_keepalive_connections=settings.max_keepalive_connections,
+                pool=settings.connection_pool,
                 transport=mock_router,
             ),
             uc=UcServiceClient(
                 base_url=settings.uc_api_base_url,
                 timeout=settings.uc_timeout,
-                max_connections=settings.max_connections,
-                max_keepalive_connections=settings.max_keepalive_connections,
+                pool=settings.connection_pool,
                 transport=mock_router,
             ),
         )
