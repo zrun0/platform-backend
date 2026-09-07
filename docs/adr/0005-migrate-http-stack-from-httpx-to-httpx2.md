@@ -10,7 +10,7 @@
 
 ## Decision
 
-全库将 HTTP 栈从 `httpx` 迁移到 `httpx2`:运行时代码(`zrun.core.http` 的 base client / feign)、测试工具(`zrun-test-utils` 的 helpers / mock_router)统一 `import httpx2`;根 `[tool.uv] constraint-dependencies` 声明 `httpx2>=2.12`,成员按 [0003](./0003-centralized-version-constraints-at-workspace-root.md) 只写 bare name;移除 `httpx` 与 `respx` 依赖。
+全库将 HTTP 栈从 `httpx` 迁移到 `httpx2`:运行时代码(`lesoon.core.http` 的 base client / feign)、测试工具(`lesoon-test-utils` 的 helpers / mock_router)统一 `import httpx2`;根 `[tool.uv] constraint-dependencies` 声明 `httpx2>=2.12`,成员按 [0003](./0003-centralized-version-constraints-at-workspace-root.md) 只写 bare name;移除 `httpx` 与 `respx` 依赖。
 
 Why:
 

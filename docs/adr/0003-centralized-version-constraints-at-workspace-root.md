@@ -41,4 +41,4 @@ Alternatives Considered:
 
 ## Related Decisions
 
-- [0001 - uv workspace monorepo + PEP 420 `zrun.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)
+- [0001 - uv workspace monorepo + PEP 420 `lesoon.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)

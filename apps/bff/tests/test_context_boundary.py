@@ -8,10 +8,10 @@ from uuid import UUID
 
 import httpx2
 from fastapi.testclient import TestClient
-from zrun_test_utils import MockRouter
-from zrun_test_utils.helpers import ok_response
+from lesoon_test_utils import MockRouter
+from lesoon_test_utils.helpers import ok_response
 
-from zrun.bff.settings import Settings
+from lesoon.bff.settings import Settings
 
 FLOW_URL = "http://flow-test:8002"
 

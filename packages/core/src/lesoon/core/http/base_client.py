@@ -1,0 +1,345 @@
+"""Base class for typed HTTP service clients.
+
+Provides connection pooling, timeout, retry with exponential backoff,
+request context propagation, error mapping, and response model parsing.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import types
+from dataclasses import replace
+from functools import cache
+from typing import Any, TypeVar, cast, overload
+
+import httpx2
+from pydantic import TypeAdapter, ValidationError
+from tenacity import (
+    AsyncRetrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
+from lesoon.core.errors import (
+    ServiceBadRequestError,
+    ServiceCallError,
+    ServiceNotFoundError,
+    ServiceResponseError,
+    ServiceTimeoutError,
+    ServiceUnavailableError,
+)
+from lesoon.core.http.context import RequestContext
+from lesoon.core.http.typehints import ResponseModel, unwrap_optional
+from lesoon.core.settings import ConnectionPoolSettings
+
+logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+@cache
+def _type_adapter(model: Any) -> TypeAdapter[Any]:
+    """Build and cache a TypeAdapter for a response model.
+
+    TypeAdapter construction is not free; caching keeps per-request parsing
+    allocation-free for repeated models.
+    """
+    return TypeAdapter(model)
+
+
+# HTTP methods that are safe to retry (idempotent).
+_IDEMPOTENT_METHODS = {"GET", "HEAD", "OPTIONS", "PUT", "DELETE"}
+
+
+def _map_http_error(
+    exc: httpx2.HTTPStatusError,
+    *,
+    service_name: str,
+) -> ServiceCallError:
+    """Map an httpx2 HTTP status error to the appropriate ServiceCallError subtype."""
+    status = exc.response.status_code
+    body = exc.response.text
+
+    if status == 404:
+        return ServiceNotFoundError(
+            f"Resource not found from {service_name}",
+            service_name=service_name,
+            response_body=body,
+        )
+    if 400 <= status < 500:
+        return ServiceBadRequestError(
+            f"{service_name} returned {status}",
+            service_name=service_name,
+            status_code=status,
+            response_body=body,
+        )
+    if status >= 500:
+        return ServiceUnavailableError(
+            f"{service_name} returned {status}",
+            service_name=service_name,
+        )
+    return ServiceCallError(
+        f"{service_name} returned {status}",
+        service_name=service_name,
+        status_code=status,
+        response_body=body,
+    )
+
+
+def _map_transport_error(
+    exc: httpx2.TransportError,
+    *,
+    service_name: str,
+) -> ServiceCallError:
+    """Map an httpx2 transport error to the appropriate ServiceCallError subtype."""
+    if isinstance(exc, httpx2.TimeoutException):
+        return ServiceTimeoutError(
+            f"Call to {service_name} timed out",
+            service_name=service_name,
+        )
+    return ServiceUnavailableError(
+        f"Cannot reach {service_name}: {exc}",
+        service_name=service_name,
+    )
+
+
+class BaseServiceClient:
+    """Base class for typed service-to-service HTTP clients.
+
+    Subclasses implement domain-specific methods that call `request()`
+    with the appropriate path, method, and response model.
+    """
+
+    def __init__(
+        self,
+        base_url: str,
+        *,
+        service_name: str,
+        timeout: float = 10.0,
+        max_connections: int | None = None,
+        max_keepalive_connections: int | None = None,
+        pool: ConnectionPoolSettings | None = None,
+        max_retries: int = 3,
+        retry_min_delay: float = 0.1,
+        retry_max_delay: float = 5.0,
+        transport: httpx2.AsyncBaseTransport | None = None,
+    ) -> None:
+        if pool is not None and (
+            max_connections is not None or max_keepalive_connections is not None
+        ):
+            msg = "pass either pool= or max_connections=/max_keepalive_connections=, not both"
+            raise ValueError(msg)
+        if pool is None:
+            pool = ConnectionPoolSettings()
+        if max_connections is not None:
+            pool = replace(pool, max_connections=max_connections)
+        if max_keepalive_connections is not None:
+            pool = replace(pool, max_keepalive_connections=max_keepalive_connections)
+
+        self.service_name = service_name
+        self._max_retries = max_retries
+        self._retry_min_delay = retry_min_delay
+        self._retry_max_delay = retry_max_delay
+        limits = httpx2.Limits(
+            max_connections=pool.max_connections,
+            max_keepalive_connections=pool.max_keepalive_connections,
+        )
+        if transport is None:
+            # Internal service-to-service traffic must never detour through
+            # an environment/system HTTP proxy (breaks localhost calls on
+            # machines with a proxy configured). Passing an explicit
+            # transport disables the client's env-proxy lookup, while the
+            # transport itself keeps trust_env=True so CA bundles injected
+            # via SSL_CERT_FILE / SSL_CERT_DIR still load.
+            transport = httpx2.AsyncHTTPTransport(trust_env=True, limits=limits)
+        self._client = httpx2.AsyncClient(
+            base_url=base_url,
+            timeout=timeout,
+            transport=transport,
+            limits=limits,
+        )
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client and release connections."""
+        await self._client.aclose()
+
+    async def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        ctx: RequestContext | None = None,
+        response_model: ResponseModel[T] = None,
+        json: dict[str, Any] | None = None,
+        params: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> T:
+        """Make an HTTP request to the downstream service.
+
+        Idempotent methods (GET, PUT, DELETE, etc.) are retried on
+        transient failures (5xx, network errors). Non-idempotent methods
+        (POST, PATCH) are never retried.
+
+        Args:
+            method: HTTP method (uppercase).
+            path: URL path relative to base_url.
+            ctx: Request context for header propagation.
+            response_model: Pydantic model (or builtin type) to parse the
+                response body into. `Model | None` declares an Optional
+                contract: an empty or JSON-null body resolves to None.
+                If None, returns the raw httpx2.Response.
+            json: JSON request body.
+            params: Query parameters.
+            headers: Additional request headers (merged with ctx headers).
+
+        Returns:
+            Parsed response if response_model is provided, else httpx2.Response.
+
+        Raises:
+            ServiceCallError: Subtype indicating the failure mode.
+        """
+        merged_headers = {**(ctx.to_headers() if ctx else {}), **(headers or {})}
+
+        if self._should_retry(method):
+            return await self._request_with_retry(
+                method,
+                path,
+                merged_headers,
+                json,
+                params,
+                response_model,
+            )
+        return await self._request_once(
+            method,
+            path,
+            merged_headers,
+            json,
+            params,
+            response_model,
+        )
+
+    def _should_retry(self, method: str) -> bool:
+        return method.upper() in _IDEMPOTENT_METHODS and self._max_retries > 0
+
+    async def _request_once(
+        self,
+        method: str,
+        path: str,
+        headers: dict[str, str],
+        json_body: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+        response_model: ResponseModel[T],
+    ) -> T:
+        try:
+            response = await self._client.request(
+                method,
+                path,
+                headers=headers,
+                json=json_body,
+                params=params,
+            )
+        except httpx2.TransportError as exc:
+            raise _map_transport_error(exc, service_name=self.service_name) from exc
+
+        try:
+            response.raise_for_status()
+        except httpx2.HTTPStatusError as exc:
+            raise _map_http_error(exc, service_name=self.service_name) from exc
+
+        try:
+            return cast(T, self._parse_response(response, response_model))
+        except (json.JSONDecodeError, UnicodeDecodeError, ValidationError) as exc:
+            # A body that cannot be decoded or parsed into the declared
+            # model is a downstream contract violation: deterministic, so
+            # never retried (this type is not in the retry predicate) and
+            # surfaced to callers as a mapped service error, not a raw 500.
+            raise ServiceResponseError(
+                f"{self.service_name} returned an unreadable response body",
+                service_name=self.service_name,
+                response_body=response.text,
+            ) from exc
+
+    async def _request_with_retry(
+        self,
+        method: str,
+        path: str,
+        headers: dict[str, str],
+        json_body: dict[str, Any] | None,
+        params: dict[str, Any] | None,
+        response_model: ResponseModel[T],
+    ) -> T:
+        """Wrap _request_once with exponential-backoff retry."""
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(self._max_retries),
+            wait=wait_exponential(
+                multiplier=1, min=self._retry_min_delay, max=self._retry_max_delay
+            ),
+            retry=retry_if_exception_type((ServiceUnavailableError, ServiceTimeoutError)),
+            reraise=True,
+        ):
+            with attempt:
+                if attempt.retry_state.attempt_number > 1:
+                    logger.warning(
+                        "Retrying %s %s (attempt %d/%d)",
+                        method,
+                        path,
+                        attempt.retry_state.attempt_number,
+                        self._max_retries,
+                        extra={"service": self.service_name},
+                    )
+                # Returns on success; tenacity retries retriable exceptions
+                # and re-raises everything else (reraise=True).
+                return await self._request_once(
+                    method,
+                    path,
+                    headers,
+                    json_body,
+                    params,
+                    response_model,
+                )
+        # Unreachable: the loop either returns or re-raises.
+        raise ServiceCallError("retry loop exited without a result")  # pragma: no cover
+
+    @staticmethod
+    @overload
+    def _parse_response(
+        response: httpx2.Response, response_model: None = None
+    ) -> httpx2.Response: ...
+
+    @staticmethod
+    @overload
+    def _parse_response(response: httpx2.Response, response_model: type[None]) -> None: ...
+
+    @staticmethod
+    @overload
+    def _parse_response(response: httpx2.Response, response_model: type[T]) -> T: ...
+
+    @staticmethod
+    @overload
+    def _parse_response(response: httpx2.Response, response_model: types.UnionType) -> Any: ...
+
+    @staticmethod
+    def _parse_response(
+        response: httpx2.Response,
+        response_model: ResponseModel[T] = None,
+    ) -> Any:
+        """Parse response body into a model.
+
+        - ``response_model=None``: escape hatch, returns the raw ``httpx2.Response``.
+        - ``response_model=type(None)`` (i.e. ``-> None``): no-content endpoints
+          such as 204; returns ``None`` without touching the (empty) body.
+        - ``response_model=Model | None``: Optional contract — an empty body
+          (204) or JSON-null body maps to None; a present body parses into Model.
+        - Otherwise: parse the JSON body into the model.
+        """
+        if response_model is None:
+            return response
+        if response_model is type(None):
+            return None
+        _inner, optional = unwrap_optional(response_model)
+        if optional and not response.content:
+            # Optional contracts encode "no result" as an empty body (204).
+            return None
+        return _type_adapter(response_model).validate_python(response.json())

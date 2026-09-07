@@ -1,7 +1,7 @@
 [project]
-name = "zrun-workspace"
+name = "lesoon-workspace"
 version = "0.1.0"
-description = "zrun FastAPI monorepo (workspace root)"
+description = "lesoon FastAPI monorepo (workspace root)"
 requires-python = ">=3.14"
 dependencies = []
 
@@ -37,7 +37,7 @@ select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]  # FastAPI Depends() in default args is the standard pattern
 
 [tool.ruff.lint.isort]
-known-first-party = ["zrun"]
+known-first-party = ["lesoon"]
 
 [tool.pytest.ini_options]
 testpaths = ["apps", "packages"]

@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import httpx2
 import pytest
+from lesoon_test_utils import MockRouter
+from lesoon_test_utils.helpers import ok_response
 from pydantic import BaseModel
-from zrun_test_utils import MockRouter
-from zrun_test_utils.helpers import ok_response
 
-from zrun.core.errors import ServiceResponseError
-from zrun.core.http.base_client import BaseServiceClient
+from lesoon.core.errors import ServiceResponseError
+from lesoon.core.http.base_client import BaseServiceClient
 
 BASE_URL = "https://downstream.test"
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from zrun.core.model_utils import partial_update_dict
+from lesoon.core.model_utils import partial_update_dict
 
 
 class StoredProfile(BaseModel):

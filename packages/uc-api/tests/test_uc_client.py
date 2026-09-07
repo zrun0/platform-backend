@@ -7,13 +7,13 @@ import json
 
 import httpx2
 import pytest
-from zrun_test_utils import MockRouter
-from zrun_test_utils.helpers import error_response, ok_response
+from lesoon_test_utils import MockRouter
+from lesoon_test_utils.helpers import error_response, ok_response
 
-from zrun.core.errors import ServiceNotFoundError
-from zrun.core.http.context import RequestContext
-from zrun.uc_api.client import UcServiceClient
-from zrun.uc_api.models import UserCreate, UserResponse, UserUpdate
+from lesoon.core.errors import ServiceNotFoundError
+from lesoon.core.http.context import RequestContext
+from lesoon.uc_api.client import UcServiceClient
+from lesoon.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 BASE_URL = "https://uc.test"
 

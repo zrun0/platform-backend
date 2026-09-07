@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from zrun.uc.api import routes as uc_routes
-from zrun.uc.main import create_app
+from lesoon.uc.api import routes as uc_routes
+from lesoon.uc.main import create_app
 
 
 @pytest.fixture

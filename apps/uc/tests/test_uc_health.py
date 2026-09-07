@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from zrun.uc.main import create_app
+from lesoon.uc.main import create_app
 
 
 def test_healthz_returns_ok() -> None:

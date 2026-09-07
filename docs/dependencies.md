@@ -11,7 +11,7 @@ version constraints are centralized at the root, see
 - Workspace members declare **bare names** in their `dependencies`. A version
   specifier in a member package is a review blocker (`fastapi` ✅,
   `fastapi>=0.100` ❌).
-- Workspace-internal packages (`zrun-*`) are wired in `[tool.uv.sources]` with
+- Workspace-internal packages (`lesoon-*`) are wired in `[tool.uv.sources]` with
   `workspace = true`.
 
 ## Adding or upgrading a dependency

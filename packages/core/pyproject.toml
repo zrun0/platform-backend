@@ -1,5 +1,5 @@
 [project]
-name = "zrun-core"
+name = "lesoon-core"
 version = "0.1.0"
 description = "Shared core utilities: config, logging, errors, HTTP clients"
 requires-python = ">=3.14"
@@ -12,15 +12,15 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "zrun-test-utils",
+    "lesoon-test-utils",
 ]
 
 [tool.uv.sources]
-zrun-test-utils = { workspace = true }
+lesoon-test-utils = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "zrun.core"
+module-name = "lesoon.core"

@@ -6,8 +6,8 @@ import asyncio
 
 import httpx2
 import pytest
-from zrun_test_utils.helpers import error_response, ok_response
-from zrun_test_utils.mock_router import MockCallList, MockRouter
+from lesoon_test_utils.helpers import error_response, ok_response
+from lesoon_test_utils.mock_router import MockCallList, MockRouter
 
 # ---------------------------------------------------------------------------
 # MockCallList
