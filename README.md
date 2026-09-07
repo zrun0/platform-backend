@@ -1,7 +1,7 @@
-# lesoon
+# Lesoon Platform
 
-Python FastAPI monorepo, managed with [uv](https://docs.astral.sh/uv/) workspaces.
-Shared packages live under the `lesoon.*` namespace (PEP 420).
+FastAPI monorepo for the Lesoon backend, managed with [uv](https://docs.astral.sh/uv/) workspaces.
+All runtime packages share the `lesoon.*` PEP 420 namespace.
 
 ## Structure
 
