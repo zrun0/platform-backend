@@ -2,7 +2,7 @@
 
 Covers decoration-time fail-fast validation and per-request behavior
 (path encoding, body detection, no-content handling, PATCH vs PUT
-serialization).
+serialization, optional return contracts).
 """
 
 from __future__ import annotations
@@ -35,6 +35,9 @@ class _DemoClient(BaseServiceClient):
 
     @feign.get("/items/{item_id}")
     async def get_item(self, item_id: str, *, ctx: object = None) -> _Item: ...
+
+    @feign.get("/items")
+    async def find_item(self, name: str, *, ctx: object = None) -> _Item | None: ...
 
     @feign.delete("/items/{item_id}")
     async def delete_item(self, item_id: str, *, ctx: object = None) -> None: ...
@@ -121,6 +124,16 @@ async def test_delete_no_content_returns_none(client: _DemoClient, mock_router: 
 
 
 @pytest.mark.asyncio
+async def test_optional_return_empty_body_is_none(
+    client: _DemoClient, mock_router: MockRouter
+) -> None:
+    """`-> Model | None` maps an empty (204) body to None."""
+    mock_router.get(f"{BASE_URL}/items").return_value = httpx2.Response(204)
+
+    assert await client.find_item("x") is None
+
+
+@pytest.mark.asyncio
 async def test_body_identified_by_type_not_name(
     client: _DemoClient, mock_router: MockRouter
 ) -> None:
@@ -190,3 +203,13 @@ async def test_none_query_param_skipped(client: _DemoClient, mock_router: MockRo
 
     await client.search(q="foo")
     assert route.calls.last.request.url.params.get("q") == "foo"
+
+
+@pytest.mark.asyncio
+async def test_contract_resolved_once_and_cached(mock_router: MockRouter) -> None:
+    """Repeated calls reuse the cached return contract (no per-call re-reflection)."""
+    c = _DemoClient(max_retries=0, transport=mock_router)
+    mock_router.delete(f"{BASE_URL}/items/1").return_value = httpx2.Response(204)
+
+    assert await c.delete_item("1") is None
+    assert await c.delete_item("1") is None

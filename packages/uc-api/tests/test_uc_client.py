@@ -155,6 +155,21 @@ async def test_delete_user_returns_none_on_204(
 
 
 @pytest.mark.asyncio
+async def test_delete_user_404_raises_not_found(
+    client: UcServiceClient, mock_router: MockRouter
+) -> None:
+    """DELETE 404 should map to ServiceNotFoundError."""
+    mock_router.delete(f"{BASE_URL}/users/user_999").return_value = error_response(
+        "Not found", status=404
+    )
+
+    with pytest.raises(ServiceNotFoundError) as exc_info:
+        await client.delete_user("user_999")
+
+    assert exc_info.value.service_name == "uc"
+
+
+@pytest.mark.asyncio
 async def test_update_user_uses_patch_with_partial_body(
     client: UcServiceClient, mock_router: MockRouter
 ) -> None:

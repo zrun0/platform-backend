@@ -11,6 +11,16 @@ return annotation, an unresolvable path placeholder, or a body method
 without a Pydantic body parameter raises ``TypeError`` immediately instead
 of failing on the first request.
 
+Return annotations:
+    - `-> Model` parses the body into Model; an empty body is an error.
+    - `-> Model | None` parses a present body into Model and maps an
+      empty (204/200) or JSON-null body to None.
+    - `-> None` skips parsing entirely and always returns None.
+
+Path params are percent-encoded before substitution: pass raw (unencoded)
+values. Pre-encoded input is encoded again ("a%20b" becomes "a%2520b"),
+matching the httpx/requests convention.
+
 Usage:
     class FlowClient(BaseServiceClient):
         @get("/flows/{flow_id}")
@@ -31,6 +41,8 @@ from typing import Any, ParamSpec, TypeVar
 from urllib.parse import quote
 
 from pydantic import BaseModel
+
+from zrun.core.http.typehints import NONE_TYPE, ResponseModel
 
 P = ParamSpec("P")
 R = TypeVar("R")
@@ -147,15 +159,42 @@ def _build_spec(method: str, path: str, func: Callable[..., Any]) -> EndpointSpe
     )
 
 
+# Per-method resolved return contract, computed once on first call and
+# cached on the wrapper (forward refs resolve after module import).
+_ReturnContract = tuple[bool, ResponseModel[Any]]
+
+
+def _resolve_return_contract(func: Callable[..., Any]) -> _ReturnContract:
+    """Resolve a method's return annotation into a request() contract.
+
+    Returns (expects_none, response_model): `-> None` maps to no response
+    model, `-> Model | None` keeps the union for Optional body handling.
+    """
+    declared = typing.get_type_hints(func).get("return", None)
+    if declared is NONE_TYPE:
+        return True, None
+    if declared is None:
+        return False, None
+    return False, declared
+
+
 def _route(method: str, path: str) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """Decorator factory: bind an HTTP method + path template to a method."""
 
     def decorator(func: Callable[P, R]) -> Callable[P, R]:
         spec = _build_spec(method, path, func)
         sig = inspect.signature(func)
+        contract: list[_ReturnContract] = []
 
         @wraps(func)
         async def wrapper(self: Any, *args: Any, **kwargs: Any) -> Any:
+            # Resolve the return contract lazily on the first call so
+            # forward refs work (`from __future__ import annotations`
+            # makes them strings at def time), then cache it.
+            if not contract:
+                contract.append(_resolve_return_contract(func))
+            expects_none, response_model = contract[0]
+
             bound = sig.bind(self, *args, **kwargs)
             bound.apply_defaults()
             arguments = dict(bound.arguments)
@@ -191,14 +230,17 @@ def _route(method: str, path: str) -> Callable[[Callable[P, R]], Callable[P, R]]
                 if arguments.get(name) is not None
             }
 
-            return await self.request(
+            result = await self.request(
                 spec.method,
                 formatted_path,
                 ctx=ctx,
                 json=json_body,
                 params=query_params or None,
-                response_model=spec.response_type,
+                response_model=response_model,
             )
+            # Honor the declared `-> None` contract instead of leaking the
+            # raw httpx2.Response to callers.
+            return None if expects_none else result
 
         # Expose the spec for contract self-check tests.
         wrapper.__endpoint_spec__ = spec  # type: ignore[attr-defined]

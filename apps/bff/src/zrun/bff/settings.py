@@ -8,9 +8,10 @@ class Settings(BaseSettings):
 
     service_name: str = "zrun-bff"
 
-    # Downstream service base URLs.
-    flow_api_base_url: str = "http://127.0.0.1:8001"
-    uc_api_base_url: str = "http://127.0.0.1:8002"
+    # Downstream service base URLs. Ports match the justfile dev recipes
+    # (flow=8002, uc=8001); override with FLOW_API_BASE_URL / UC_API_BASE_URL.
+    flow_api_base_url: str = "http://127.0.0.1:8002"
+    uc_api_base_url: str = "http://127.0.0.1:8001"
 
     # Per-service timeouts (seconds).
     flow_timeout: float = 30.0

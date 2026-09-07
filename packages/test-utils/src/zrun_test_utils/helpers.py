@@ -10,7 +10,7 @@ from typing import Any
 import httpx2
 
 
-def ok_response(data: dict[str, Any] | list[Any], *, status: int = 200) -> httpx2.Response:
+def ok_response(data: dict[str, Any] | list[Any] | None, *, status: int = 200) -> httpx2.Response:
     """Create a successful HTTP response for testing.
 
     Args:

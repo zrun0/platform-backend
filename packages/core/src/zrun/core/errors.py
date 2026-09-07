@@ -56,6 +56,29 @@ class ServiceUnavailableError(ServiceCallError):
         super().__init__(message, service_name=service_name, status_code=502)
 
 
+class ServiceResponseError(ServiceCallError):
+    """Raised when a downstream response body cannot be decoded or parsed.
+
+    The service was reachable and answered 2xx, but the body violates the
+    API contract. Distinct from availability failures so callers and
+    monitoring can tell a deterministic bug from an outage.
+    """
+
+    def __init__(
+        self,
+        message: str = "Downstream returned an unreadable response body",
+        *,
+        service_name: str = "unknown",
+        response_body: str | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            service_name=service_name,
+            status_code=502,
+            response_body=response_body,
+        )
+
+
 class ServiceBadRequestError(ServiceCallError):
     """Raised when a downstream service returns a 4xx response."""
 
