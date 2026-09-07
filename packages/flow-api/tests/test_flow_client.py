@@ -164,6 +164,21 @@ async def test_delete_flow_returns_none_on_204(
     assert result is None
 
 
+@pytest.mark.asyncio
+async def test_delete_flow_404_raises_not_found(
+    client: FlowServiceClient, mock_router: MockRouter
+) -> None:
+    """DELETE 404 should map to ServiceNotFoundError."""
+    mock_router.delete(f"{BASE_URL}/flows/flow_999").return_value = ok_response(
+        {"detail": "Not found"}, status=404
+    )
+
+    with pytest.raises(ServiceNotFoundError) as exc_info:
+        await client.delete_flow("flow_999")
+
+    assert exc_info.value.service_name == "flow"
+
+
 def test_all_endpoints_have_valid_specs() -> None:
     """Every declared endpoint must carry a validated EndpointSpec."""
     for _name, func in inspect.getmembers(FlowServiceClient, inspect.iscoroutinefunction):

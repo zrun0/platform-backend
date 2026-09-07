@@ -6,12 +6,14 @@ request context propagation, error mapping, and response model parsing.
 
 from __future__ import annotations
 
+import json
 import logging
+import types
 from functools import cache
 from typing import Any, TypeVar, cast, overload
 
 import httpx2
-from pydantic import TypeAdapter
+from pydantic import TypeAdapter, ValidationError
 from tenacity import (
     AsyncRetrying,
     retry_if_exception_type,
@@ -23,10 +25,12 @@ from zrun.core.errors import (
     ServiceBadRequestError,
     ServiceCallError,
     ServiceNotFoundError,
+    ServiceResponseError,
     ServiceTimeoutError,
     ServiceUnavailableError,
 )
 from zrun.core.http.context import RequestContext
+from zrun.core.http.typehints import unwrap_optional
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +131,10 @@ class BaseServiceClient:
             base_url=base_url,
             timeout=timeout,
             transport=transport,
+            # Internal service-to-service traffic must never detour through
+            # an environment/system HTTP proxy (breaks localhost calls on
+            # developer machines with a system proxy configured).
+            trust_env=False,
             limits=httpx2.Limits(
                 max_connections=max_connections,
                 max_keepalive_connections=max_keepalive_connections,
@@ -143,7 +151,7 @@ class BaseServiceClient:
         path: str,
         *,
         ctx: RequestContext | None = None,
-        response_model: type[T] | None = None,
+        response_model: type[T] | types.UnionType | None = None,
         json: dict[str, Any] | None = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
@@ -159,7 +167,9 @@ class BaseServiceClient:
             path: URL path relative to base_url.
             ctx: Request context for header propagation.
             response_model: Pydantic model (or builtin type) to parse the
-                response body into. If None, returns the raw httpx2.Response.
+                response body into. `Model | None` declares an Optional
+                contract: an empty or JSON-null body resolves to None.
+                If None, returns the raw httpx2.Response.
             json: JSON request body.
             params: Query parameters.
             headers: Additional request headers (merged with ctx headers).
@@ -200,7 +210,7 @@ class BaseServiceClient:
         headers: dict[str, str],
         json_body: dict[str, Any] | None,
         params: dict[str, Any] | None,
-        response_model: type[T] | None,
+        response_model: type[T] | types.UnionType | None,
     ) -> T:
         try:
             response = await self._client.request(
@@ -218,7 +228,18 @@ class BaseServiceClient:
         except httpx2.HTTPStatusError as exc:
             raise _map_http_error(exc, service_name=self.service_name) from exc
 
-        return cast(T, self._parse_response(response, response_model))
+        try:
+            return cast(T, self._parse_response(response, response_model))
+        except (json.JSONDecodeError, UnicodeDecodeError, ValidationError) as exc:
+            # A body that cannot be decoded or parsed into the declared
+            # model is a downstream contract violation: deterministic, so
+            # never retried (this type is not in the retry predicate) and
+            # surfaced to callers as a mapped service error, not a raw 500.
+            raise ServiceResponseError(
+                f"{self.service_name} returned an unreadable response body",
+                service_name=self.service_name,
+                response_body=response.text,
+            ) from exc
 
     async def _request_with_retry(
         self,
@@ -227,7 +248,7 @@ class BaseServiceClient:
         headers: dict[str, str],
         json_body: dict[str, Any] | None,
         params: dict[str, Any] | None,
-        response_model: type[T] | None,
+        response_model: type[T] | types.UnionType | None,
     ) -> T:
         """Wrap _request_once with exponential-backoff retry."""
         async for attempt in AsyncRetrying(
@@ -276,19 +297,31 @@ class BaseServiceClient:
     def _parse_response(response: httpx2.Response, response_model: type[T]) -> T: ...
 
     @staticmethod
+    @overload
+    def _parse_response(
+        response: httpx2.Response, response_model: types.UnionType
+    ) -> Any: ...
+
+    @staticmethod
     def _parse_response(
         response: httpx2.Response,
-        response_model: type[T] | None = None,
-    ) -> T | httpx2.Response | None:
+        response_model: type[T] | types.UnionType | None = None,
+    ) -> Any:
         """Parse response body into a model.
 
         - ``response_model=None``: escape hatch, returns the raw ``httpx2.Response``.
         - ``response_model=type(None)`` (i.e. ``-> None``): no-content endpoints
           such as 204; returns ``None`` without touching the (empty) body.
+        - ``response_model=Model | None``: Optional contract — an empty body
+          (204) or JSON-null body maps to None; a present body parses into Model.
         - Otherwise: parse the JSON body into the model.
         """
         if response_model is None:
             return response
         if response_model is type(None):
+            return None
+        inner, optional = unwrap_optional(response_model)
+        if optional and not response.content:
+            # Optional contracts encode "no result" as an empty body (204).
             return None
         return _type_adapter(response_model).validate_python(response.json())

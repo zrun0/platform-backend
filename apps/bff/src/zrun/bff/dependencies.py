@@ -11,6 +11,7 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
+from zrun.auth.types import CurrentUser
 from zrun.core.http.context import RequestContext
 from zrun.flow_api import FlowApi
 from zrun.uc_api import UcApi
@@ -26,9 +27,9 @@ def get_uc_client(request: Request) -> UcApi:
     return request.app.state.clients.uc
 
 
-def get_request_context(request: Request) -> RequestContext:
-    """Build a RequestContext from the current incoming request."""
-    return RequestContext.from_request(request)
+def get_request_context(request: Request, user: CurrentUser) -> RequestContext:
+    """Build a RequestContext; identity comes from the auth dependency only."""
+    return RequestContext.from_request(request, user_id=user)
 
 
 # Type aliases for dependency injection - improves route handler readability

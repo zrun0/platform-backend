@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -9,9 +11,12 @@ from zrun.core.errors import (
     ServiceBadRequestError,
     ServiceCallError,
     ServiceNotFoundError,
+    ServiceResponseError,
     ServiceTimeoutError,
     ServiceUnavailableError,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def map_service_error_to_status(exc: ServiceCallError) -> int:
@@ -60,6 +65,14 @@ def register_service_error_handlers(app: FastAPI) -> None:
         request: Request,  # noqa: ARG001 - required by FastAPI interface
         exc: ServiceCallError,
     ) -> JSONResponse:
+        if isinstance(exc, ServiceResponseError):
+            # Contract violations are deterministic bugs, not load events:
+            # log loudly so they stay distinguishable from outages.
+            logger.error(
+                "Downstream %s violated the response contract: %s",
+                exc.service_name,
+                exc.message,
+            )
         status = map_service_error_to_status(exc)
         return JSONResponse(
             status_code=status,

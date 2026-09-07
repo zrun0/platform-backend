@@ -14,6 +14,7 @@ class FlowResponse(BaseModel):
 
     id: str
     name: str
+    description: str | None = None
     status: str
     created_at: datetime
     updated_at: datetime

@@ -29,22 +29,30 @@ class RequestContext:
     user_id: str | None = None
 
     @classmethod
-    def from_request(cls, request: Request) -> RequestContext:
-        """Build a RequestContext from an incoming FastAPI request.
+    def from_request(cls, request: Request, *, user_id: str | None = None) -> RequestContext:
+        """Build a RequestContext from an incoming request (trusted inputs only).
 
-        The request ID is resolved with the following priority:
-        1. Upstream-supplied ``X-Request-ID`` header.
-        2. Middleware-generated ID stored on ``request.state.request_id``.
+        - request_id: taken from ``request.state.request_id`` (set and
+          validated by RequestIDMiddleware); never from the raw inbound header.
+        - trace_id: generated fresh for every request. The inbound
+          ``X-Trace-ID`` header is ignored: there is no trusted inbound
+          trace to continue at this boundary.
+        - user_id: only via the explicit ``user_id`` parameter, which
+          callers must derive from authenticated identity.
+
+        The inbound ``X-User-ID`` and ``X-Trace-ID`` headers are deliberately
+        ignored: this is the trust boundary between external callers and
+        internal services, and client-supplied identity must never propagate
+        downstream.
         """
         auth_header = request.headers.get(_HEADER_AUTH)
-        request_id = request.headers.get(_HEADER_REQUEST_ID)
-        if request_id is None:
-            request_id = getattr(request.state, "request_id", None)
+        request_id = getattr(request.state, "request_id", None) or str(uuid4())
+        trace_id = str(uuid4())
         return cls(
             auth_token=auth_header,
             request_id=request_id,
-            trace_id=request.headers.get(_HEADER_TRACE_ID),
-            user_id=request.headers.get(_HEADER_USER_ID),
+            trace_id=trace_id,
+            user_id=user_id,
         )
 
     def to_headers(self) -> dict[str, str]:

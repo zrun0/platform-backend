@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import UTC, datetime
-from typing import Annotated
+from typing import Annotated, Any
+from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -15,6 +17,11 @@ router = APIRouter()
 # In-memory store for demonstration purposes.
 _USERS: dict[str, UserResponse] = {}
 _USERS_BY_USERNAME: dict[str, str] = {}
+
+# Sync routes run on a threadpool, so every check-then-read/write sequence
+# on the store and username index must be atomic to stay consistent and
+# keep uniqueness under concurrency.
+_USERS_LOCK = threading.Lock()
 
 
 @router.get("/healthz")
@@ -38,18 +45,20 @@ def list_users() -> list[UserResponse]:
 @router.get("/users/by-username", response_model=UserResponse)
 def get_user_by_username(username: Annotated[str, Query(...)]) -> UserResponse:
     """Retrieve a user by username."""
-    user_id = _USERS_BY_USERNAME.get(username)
-    if user_id is None or user_id not in _USERS:
-        raise HTTPException(status_code=404, detail="User not found")
-    return _USERS[user_id]
+    with _USERS_LOCK:
+        user_id = _USERS_BY_USERNAME.get(username)
+        if user_id is None or user_id not in _USERS:
+            raise HTTPException(status_code=404, detail="User not found")
+        return _USERS[user_id]
 
 
 @router.get("/users/{user_id}", response_model=UserResponse)
 def get_user(user_id: str) -> UserResponse:
     """Retrieve a single user by ID."""
-    if user_id not in _USERS:
-        raise HTTPException(status_code=404, detail="User not found")
-    return _USERS[user_id]
+    with _USERS_LOCK:
+        if user_id not in _USERS:
+            raise HTTPException(status_code=404, detail="User not found")
+        return _USERS[user_id]
 
 
 @router.post("/users", response_model=UserResponse, status_code=201)
@@ -58,21 +67,24 @@ def create_user(
     _user: CurrentUser,
 ) -> UserResponse:
     """Create a new user."""
-    if payload.username in _USERS_BY_USERNAME:
-        raise HTTPException(status_code=409, detail="Username already exists")
+    with _USERS_LOCK:
+        if payload.username in _USERS_BY_USERNAME:
+            raise HTTPException(status_code=409, detail="Username already exists")
 
-    now = datetime.now(UTC)
-    user_id = f"user_{len(_USERS) + 1}"
-    user = UserResponse(
-        id=user_id,
-        username=payload.username,
-        email=payload.email,
-        status="active",
-        created_at=now,
-        updated_at=now,
-    )
-    _USERS[user_id] = user
-    _USERS_BY_USERNAME[payload.username] = user_id
+        now = datetime.now(UTC)
+        # UUID-based IDs: length-derived IDs collide under concurrency and
+        # get resurrected after deletes.
+        user_id = f"user_{uuid4()}"
+        user = UserResponse(
+            id=user_id,
+            username=payload.username,
+            email=payload.email,
+            status="active",
+            created_at=now,
+            updated_at=now,
+        )
+        _USERS[user_id] = user
+        _USERS_BY_USERNAME[payload.username] = user_id
     return user
 
 
@@ -83,12 +95,33 @@ def update_user(
     _user: CurrentUser,
 ) -> UserResponse:
     """Update an existing user."""
-    if user_id not in _USERS:
-        raise HTTPException(status_code=404, detail="User not found")
-    existing = _USERS[user_id]
-    update_data = payload.model_dump(exclude_unset=True)
-    updated = existing.model_copy(update={**update_data, "updated_at": datetime.now(UTC)})
-    _USERS[user_id] = updated
+    with _USERS_LOCK:
+        if user_id not in _USERS:
+            raise HTTPException(status_code=404, detail="User not found")
+        existing = _USERS[user_id]
+        # Explicit nulls are treated as omitted fields: every updatable
+        # field is required in the stored model, so keeping a null would
+        # fail validation instead of clearing the field.
+        update_data: dict[str, Any] = {
+            key: value
+            for key, value in payload.model_dump(exclude_unset=True).items()
+            if value is not None
+        }
+        new_username: str | None = update_data.get("username")
+        if new_username is not None and new_username != existing.username:
+            # Renames must keep the username index consistent and unique:
+            # check first so a 409 never leaves partial state behind.
+            owner_id = _USERS_BY_USERNAME.get(new_username)
+            if owner_id is not None and owner_id != user_id:
+                raise HTTPException(status_code=409, detail="Username already exists")
+        # model_copy(update=) overlays already-validated fields (payload
+        # constraints were checked at parse time), so no re-validation.
+        update_data["updated_at"] = datetime.now(UTC)
+        updated = existing.model_copy(update=update_data)
+        _USERS[user_id] = updated
+        if new_username is not None and new_username != existing.username:
+            _USERS_BY_USERNAME.pop(existing.username, None)
+            _USERS_BY_USERNAME[new_username] = user_id
     return updated
 
 
@@ -98,7 +131,8 @@ def delete_user(
     _user: CurrentUser,
 ) -> None:
     """Delete a user by ID."""
-    if user_id not in _USERS:
-        raise HTTPException(status_code=404, detail="User not found")
-    user = _USERS.pop(user_id)
-    _USERS_BY_USERNAME.pop(user.username, None)
+    with _USERS_LOCK:
+        if user_id not in _USERS:
+            raise HTTPException(status_code=404, detail="User not found")
+        user = _USERS.pop(user_id)
+        _USERS_BY_USERNAME.pop(user.username, None)

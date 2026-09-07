@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import re
 from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -10,17 +12,37 @@ from starlette.responses import Response
 
 _HEADER_REQUEST_ID = "X-Request-ID"
 
+logger = logging.getLogger(__name__)
+
+# Client-supplied request IDs are echoed into logs, downstream headers, and
+# responses, so only accept a conservative unreserved-character token.
+_REQUEST_ID_PATTERN = re.compile(r"[A-Za-z0-9._~-]{1,128}")
+
+
+def sanitize_request_id(raw: str | None) -> str:
+    """Return the raw request ID if it is safe, else a fresh UUID4."""
+    if raw and _REQUEST_ID_PATTERN.fullmatch(raw):
+        return raw
+    return str(uuid4())
+
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
-    """Read or generate a request ID and attach it to the request state.
+    """Read or generate a validated request ID and attach it to request state.
 
     If the incoming request carries an `X-Request-ID` header, its value is
-    used. Otherwise a new UUID4 is generated. The ID is also set on the
+    used only when it matches a conservative unreserved-character token;
+    anything else (missing, oversized, unusual characters) is replaced with a
+    fresh UUID4 to prevent log or header injection. The ID is also set on the
     response so callers can correlate logs and traces.
     """
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        request_id = request.headers.get(_HEADER_REQUEST_ID) or str(uuid4())
+        raw_id = request.headers.get(_HEADER_REQUEST_ID)
+        request_id = sanitize_request_id(raw_id)
+        if raw_id is not None and request_id != raw_id:
+            # Replacing a caller-supplied ID silently breaks their log
+            # correlation; leave a diagnostic trace of the substitution.
+            logger.warning("Replaced invalid X-Request-ID %r with a generated UUID", raw_id)
         request.state.request_id = request_id
 
         response = await call_next(request)
