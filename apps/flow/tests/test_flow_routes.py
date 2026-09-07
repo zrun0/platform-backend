@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from zrun.flow.api import routes as flow_routes
-from zrun.flow.main import create_app
+from lesoon.flow.api import routes as flow_routes
+from lesoon.flow.main import create_app
 
 
 @pytest.fixture

@@ -1,5 +1,5 @@
 [project]
-name = "zrun-uc"
+name = "lesoon-uc"
 version = "0.1.0"
 description = "User Center service"
 requires-python = ">=3.14"
@@ -7,19 +7,19 @@ dependencies = [
     "fastapi",
     "pydantic-settings",
     "uvicorn",
-    "zrun-auth",
-    "zrun-core",
-    "zrun-uc-api",
+    "lesoon-auth",
+    "lesoon-core",
+    "lesoon-uc-api",
 ]
 
 [tool.uv.sources]
-zrun-auth = { workspace = true }
-zrun-core = { workspace = true }
-zrun-uc-api = { workspace = true }
+lesoon-auth = { workspace = true }
+lesoon-core = { workspace = true }
+lesoon-uc-api = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "zrun.uc"
+module-name = "lesoon.uc"

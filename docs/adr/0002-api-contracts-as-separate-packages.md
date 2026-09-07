@@ -10,13 +10,13 @@ BFF 通过 HTTP 调用下游服务(UC、Flow)。请求/响应模型与调用代�
 
 ## Decision
 
-每个暴露 HTTP API 的服务配一个同级契约包 `packages/<service>-api/`(发行名 `zrun-<service>-api`,模块名 `zrun.<service>_api`),恰好包含三件事:
+每个暴露 HTTP API 的服务配一个同级契约包 `packages/<service>-api/`(发行名 `lesoon-<service>-api`,模块名 `lesoon.<service>_api`),恰好包含三件事:
 
 - `models.py` — Pydantic wire models,线上契约
 - `protocol.py` — `typing.Protocol`,client 以结构化子类型(structural subtyping)满足它
 - `client.py` — `BaseServiceClient` 子类,Feign 风格端点装饰器
 
-契约包只依赖 `zrun-core`,绝不依赖 provider 的 app 包;consumer(BFF)依赖契约包而非服务包。
+契约包只依赖 `lesoon-core`,绝不依赖 provider 的 app 包;consumer(BFF)依赖契约包而非服务包。
 
 Why:
 
@@ -44,8 +44,8 @@ Alternatives Considered:
 **Mitigation:**
 
 - 三件套约定由 [CONTEXT.md](../../CONTEXT.md) 的 Contract Package 词条承载;新服务照词条落地
-- 契约包不得长出业务逻辑:超出三件套的代码属于 `zrun-core` 或 provider(review 把关)
+- 契约包不得长出业务逻辑:超出三件套的代码属于 `lesoon-core` 或 provider(review 把关)
 
 ## Related Decisions
 
-- [0001 - uv workspace monorepo + PEP 420 `zrun.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)
+- [0001 - uv workspace monorepo + PEP 420 `lesoon.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)

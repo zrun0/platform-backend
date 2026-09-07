@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from zrun.core.http.base_client import BaseServiceClient
-from zrun.core.settings import ConnectionPoolSettings
+from lesoon.core.http.base_client import BaseServiceClient
+from lesoon.core.settings import ConnectionPoolSettings
 
 
 def test_pool_and_kwargs_are_mutually_exclusive() -> None:

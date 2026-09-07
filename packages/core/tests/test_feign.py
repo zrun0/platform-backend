@@ -12,12 +12,12 @@ from typing import Any
 
 import httpx2
 import pytest
+from lesoon_test_utils import MockRouter
+from lesoon_test_utils.helpers import ok_response
 from pydantic import BaseModel
-from zrun_test_utils import MockRouter
-from zrun_test_utils.helpers import ok_response
 
-from zrun.core.http import feign
-from zrun.core.http.base_client import BaseServiceClient
+from lesoon.core.http import feign
+from lesoon.core.http.base_client import BaseServiceClient
 
 BASE_URL = "https://demo.test"
 

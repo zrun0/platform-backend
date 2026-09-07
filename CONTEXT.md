@@ -1,6 +1,6 @@
-# Zrun Backend Platform
+# Lesoon Backend Platform
 
-Zrun 的后端平台:一个 BFF 聚合多个独立领域服务(UC、Flow),共享代码抽取为 workspace 包。
+Lesoon 的后端平台:一个 BFF 聚合多个独立领域服务(UC、Flow),共享代码抽取为 workspace 包。
 
 ## Language
 

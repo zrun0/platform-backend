@@ -1,4 +1,4 @@
-# 0001 - uv workspace monorepo + PEP 420 `zrun.*` namespace
+# 0001 - uv workspace monorepo + PEP 420 `lesoon.*` namespace
 
 ## Status
 
@@ -10,13 +10,13 @@
 
 ## Decision
 
-采用 uv workspace monorepo,两层布局:可部署服务在 `apps/`(bff、uc、flow),共享库在 `packages/`(core、auth、契约包)。所有 import 代码位于 `zrun.*` PEP 420 隐式命名空间(implicit namespace)下——命名空间根没有 `__init__.py`——每个发行包通过 `tool.uv.build-backend.module-name` 映射到一个模块(如 `zrun-uc-api` → `zrun.uc_api`)。
+采用 uv workspace monorepo,两层布局:可部署服务在 `apps/`(bff、uc、flow),共享库在 `packages/`(core、auth、契约包)。所有 import 代码位于 `lesoon.*` PEP 420 隐式命名空间(implicit namespace)下——命名空间根没有 `__init__.py`——每个发行包通过 `tool.uv.build-backend.module-name` 映射到一个模块(如 `lesoon-uc-api` → `lesoon.uc_api`)。
 
 Why:
 
 - 服务独立部署,共享代码经 `workspace = true` source 直连,无需私有 index 发布
 - 单 lockfile/venv:跨包重构单 PR 完成,工具链(测试、类型检查)天然全树覆盖
-- PEP 420 让任意发行包持有 `zrun.*` 下任意模块,无需命名空间属主包
+- PEP 420 让任意发行包持有 `lesoon.*` 下任意模块,无需命名空间属主包
 
 Alternatives Considered:
 
@@ -28,7 +28,7 @@ Alternatives Considered:
 **Positive:**
 
 - 跨包重构单 PR;`just sync` / `just test` / `just check` 覆盖整棵树
-- 每个 app 只声明自己 import 的依赖(BFF 拉 `zrun-uc-api` 而非 UC app),意外耦合在 type-check 阶段暴露
+- 每个 app 只声明自己 import 的依赖(BFF 拉 `lesoon-uc-api` 而非 UC app),意外耦合在 type-check 阶段暴露
 
 **Negative:**
 
@@ -38,7 +38,7 @@ Alternatives Considered:
 **Mitigation:**
 
 - 目录职责与包命名约定见 living docs:[README.md](../../README.md) 的 Structure 一节、[CONTEXT.md](../../CONTEXT.md) 的 Service 词条
-- `zrun-test-utils` 例外:发行顶层模块 `zrun_test_utils`(不在 `zrun.*` 下),测试脚手架刻意置于运行时命名空间之外
+- `lesoon-test-utils` 例外:发行顶层模块 `lesoon_test_utils`(不在 `lesoon.*` 下),测试脚手架刻意置于运行时命名空间之外
 
 ## Related Decisions
 

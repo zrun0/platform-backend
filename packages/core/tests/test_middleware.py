@@ -7,7 +7,7 @@ from uuid import UUID
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from zrun.core.middleware import RequestIDMiddleware, sanitize_header_token
+from lesoon.core.middleware import RequestIDMiddleware, sanitize_header_token
 
 
 def _echo_app(*, trust_inbound_trace: bool = False) -> TestClient:

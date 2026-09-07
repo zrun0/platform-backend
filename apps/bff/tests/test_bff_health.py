@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from zrun.bff.main import create_app
+from lesoon.bff.main import create_app
 
 
 @pytest.fixture

@@ -6,12 +6,12 @@ from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
-from zrun_test_utils import MockRouter
+from lesoon_test_utils import MockRouter
 
-from zrun.bff.main import AppClients, create_app
-from zrun.bff.settings import Settings
-from zrun.flow_api import FlowServiceClient
-from zrun.uc_api import UcServiceClient
+from lesoon.bff.main import AppClients, create_app
+from lesoon.bff.settings import Settings
+from lesoon.flow_api import FlowServiceClient
+from lesoon.uc_api import UcServiceClient
 
 
 @pytest.fixture

@@ -10,7 +10,7 @@
 
 ## Decision
 
-在 `zrun-test-utils` 内自建 `MockRouter`——一个 `httpx2.AsyncBaseTransport` 子类,提供 respx 兼容 API 子集(`router.get/post(url)`、`route.return_value`、`route.called`、`route.calls.last.request`),经 `BaseServiceClient` 新增的 `transport=` 注入 seam 接入 client。未注册的请求抛 `AssertionError`。
+在 `lesoon-test-utils` 内自建 `MockRouter`——一个 `httpx2.AsyncBaseTransport` 子类,提供 respx 兼容 API 子集(`router.get/post(url)`、`route.return_value`、`route.called`、`route.calls.last.request`),经 `BaseServiceClient` 新增的 `transport=` 注入 seam 接入 client。未注册的请求抛 `AssertionError`。
 
 Why:
 
@@ -44,12 +44,12 @@ Alternatives Considered:
 
 ## Implementation Notes
 
-- `MockRouter` 驻留 `zrun-test_utils.mock_router`,经包根 `__init__` 导出
+- `MockRouter` 驻留 `lesoon-test_utils.mock_router`,经包根 `__init__` 导出
 - 各 tests 目录的 `conftest.py` 提供 `mock_router` fixture,client fixture 以 `transport=mock_router` 注入
 - URL 匹配规则:scheme://host/path 精确匹配,忽略 query string(同 respx 默认)
 
 ## Related Decisions
 
-- [0001 - uv workspace monorepo + PEP 420 `zrun.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)
+- [0001 - uv workspace monorepo + PEP 420 `lesoon.*` namespace](./0001-uv-workspace-monorepo-with-pep420-namespace.md)
 - [0002 - API contracts as separate packages](./0002-api-contracts-as-separate-packages.md)
 - [0003 - Centralized version constraints at the workspace root](./0003-centralized-version-constraints-at-workspace-root.md)
