@@ -142,8 +142,8 @@ class BaseServiceClient:
         self._retry_min_delay = retry_min_delay
         self._retry_max_delay = retry_max_delay
         limits = httpx2.Limits(
-            max_connections=max_connections,
-            max_keepalive_connections=max_keepalive_connections,
+            max_connections=pool.max_connections,
+            max_keepalive_connections=pool.max_keepalive_connections,
         )
         if transport is None:
             # Internal service-to-service traffic must never detour through
@@ -158,14 +158,6 @@ class BaseServiceClient:
             timeout=timeout,
             transport=transport,
             limits=limits,
-            limits=httpx2.Limits(
-                max_connections=max_connections,
-                max_keepalive_connections=max_keepalive_connections,
-            ),
-            limits=httpx2.Limits(
-                max_connections=pool.max_connections,
-                max_keepalive_connections=pool.max_keepalive_connections,
-            ),
         )
 
     async def aclose(self) -> None:
