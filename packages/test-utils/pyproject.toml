@@ -1,7 +1,7 @@
 [project]
-name = "lesoon-test-utils"
+name = "novon-test-utils"
 version = "0.1.0"
-description = "Shared test utilities and fixtures for lesoon platform"
+description = "Shared test utilities and fixtures for novon platform"
 requires-python = ">=3.14"
 dependencies = [
     "httpx2",
@@ -9,11 +9,11 @@ dependencies = [
 ]
 
 [project.entry-points.pytest11]
-lesoon-test-utils = "lesoon_test_utils.plugin"
+novon-test-utils = "novon_test_utils.plugin"
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "lesoon_test_utils"
+module-name = "novon_test_utils"

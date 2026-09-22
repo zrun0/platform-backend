@@ -1,11 +1,11 @@
-# lesoon-test-utils
+# novon-test-utils
 
-Shared test utilities and fixtures for lesoon platform backend.
+Shared test utilities and fixtures for novon platform backend.
 
 ## Usage
 
 ```python
-from lesoon_test_utils.helpers import ok_response, error_response
+from novon_test_utils.helpers import ok_response, error_response
 
 
 def test_api_client():
@@ -23,7 +23,7 @@ clients. Use `MockRouter` — an `httpx2.AsyncBaseTransport` with a
 respx-like API — injected via the `transport=` parameter:
 
 ```python
-from lesoon_test_utils import MockRouter
+from novon_test_utils import MockRouter
 
 router = MockRouter()
 client = UcServiceClient(base_url="https://uc.test", transport=router)
@@ -53,16 +53,16 @@ def test_get_user(client: UcServiceClient, mock_router: MockRouter) -> None:
     mock_router.get("https://uc.test/users/1").return_value = ok_response(user)
 ```
 
-Disable it for a run with `-p no:lesoon-test-utils`.
+Disable it for a run with `-p no:novon-test-utils`.
 
 ## Installation
 
-Part of the lesoon uv workspace. A member package that wants these helpers in its tests declares them in the dev dependency group with a workspace source (see `packages/uc-api/pyproject.toml` for a live example):
+Part of the novon uv workspace. A member package that wants these helpers in its tests declares them in the dev dependency group with a workspace source (see `packages/uc-api/pyproject.toml` for a live example):
 
 ```toml
 [dependency-groups]
-dev = ["lesoon-test-utils"]
+dev = ["novon-test-utils"]
 
 [tool.uv.sources]
-lesoon-test-utils = { workspace = true }
+novon-test-utils = { workspace = true }
 ```

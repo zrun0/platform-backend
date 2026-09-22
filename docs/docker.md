@@ -2,13 +2,13 @@
 
 All three service images are built from the single parameterized `Dockerfile`
 at the repo root. Each image is scoped to one workspace member via
-`uv sync --frozen --no-dev --no-editable --package lesoon-<service>`, so the
+`uv sync --frozen --no-dev --no-editable --package novon-<service>`, so the
 runtime image is `python:3.14-slim` plus a venv — no source tree, no dev tools.
 
 ## Commands
 
 ```bash
-just docker-build        # build lesoon-bff, lesoon-uc, lesoon-flow
+just docker-build        # build novon-bff, novon-uc, novon-flow
 just docker-up           # start the stack detached; blocks until healthy
 just docker-down         # stop the stack
 just docker-logs bff     # tail one service (omit the name for all)
@@ -20,7 +20,7 @@ just docker-smoke        # build + up + probe + teardown; needs curl
 - Each container listens on its own port inside the network: bff `8000`,
   uc `8001`, flow `8002` (same as local dev).
 - Only the BFF publishes a host port (`8000:8000`). UC and Flow are reachable
-  only on the private `lesoon` bridge network.
+  only on the private `novon` bridge network.
 - The BFF reaches downstream services via
   `FLOW_API_BASE_URL=http://flow:8002` and `UC_API_BASE_URL=http://uc:8001`,
   set in `compose.yaml`. Override them with a compose override file or
@@ -31,10 +31,10 @@ just docker-smoke        # build + up + probe + teardown; needs curl
 
 ## Image versioning
 
-`compose.yaml` runs `lesoon-<svc>:${IMAGE_VERSION:-latest}` — one variable
+`compose.yaml` runs `novon-<svc>:${IMAGE_VERSION:-latest}` — one variable
 for all three services (lockstep), unset defaults to `latest`.
 `just docker-build` and `just docker-up` set it to the workspace version
-(e.g. `lesoon-bff:0.2.0`) from `just _tag`, which reads the root
+(e.g. `novon-bff:0.2.0`) from `just _tag`, which reads the root
 `pyproject.toml`.
 
 Versions are lockstep: the root `pyproject.toml` is the single version
@@ -46,7 +46,7 @@ The source commit is baked into the image as OCI labels, not the tag —
 them from the justfile). Inspect with:
 
 ```bash
-docker inspect lesoon-bff:0.2.0 --format '{{.Config.Labels}}'
+docker inspect novon-bff:0.2.0 --format '{{.Config.Labels}}'
 # map[org.opencontainers.image.revision:dc1a001 org.opencontainers.image.version:0.2.0]
 ```
 

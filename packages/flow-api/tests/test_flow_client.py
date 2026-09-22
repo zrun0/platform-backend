@@ -7,16 +7,16 @@ from datetime import UTC, datetime
 
 import httpx2
 import pytest
-from lesoon_test_utils import MockRouter
-from lesoon_test_utils.helpers import ok_response
+from novon_test_utils import MockRouter
+from novon_test_utils.helpers import ok_response
 
-from lesoon.core.errors import (
+from novon.core.errors import (
     ServiceNotFoundError,
     ServiceUnavailableError,
 )
-from lesoon.core.http.context import RequestContext
-from lesoon.flow_api.client import FlowServiceClient
-from lesoon.flow_api.models import FlowCreate, FlowResponse
+from novon.core.http.context import RequestContext
+from novon.flow_api.client import FlowServiceClient
+from novon.flow_api.models import FlowCreate, FlowResponse
 
 BASE_URL = "https://flow.test"
 

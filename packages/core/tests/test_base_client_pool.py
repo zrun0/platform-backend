@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from lesoon.core.http.base_client import BaseServiceClient
-from lesoon.core.settings import ConnectionPoolSettings
+from novon.core.http.base_client import BaseServiceClient
+from novon.core.settings import ConnectionPoolSettings
 
 
 def test_pool_and_kwargs_are_mutually_exclusive() -> None:

@@ -7,13 +7,13 @@ import json
 
 import httpx2
 import pytest
-from lesoon_test_utils import MockRouter
-from lesoon_test_utils.helpers import error_response, ok_response
+from novon_test_utils import MockRouter
+from novon_test_utils.helpers import error_response, ok_response
 
-from lesoon.core.errors import ServiceNotFoundError
-from lesoon.core.http.context import RequestContext
-from lesoon.uc_api.client import UcServiceClient
-from lesoon.uc_api.models import UserCreate, UserResponse, UserUpdate
+from novon.core.errors import ServiceNotFoundError
+from novon.core.http.context import RequestContext
+from novon.uc_api.client import UcServiceClient
+from novon.uc_api.models import UserCreate, UserResponse, UserUpdate
 
 BASE_URL = "https://uc.test"
 

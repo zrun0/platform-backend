@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from lesoon.flow.main import create_app
+from novon.flow.main import create_app
 
 
 def _client() -> TestClient:

@@ -6,12 +6,12 @@ from collections.abc import Callable
 
 import pytest
 from fastapi.testclient import TestClient
-from lesoon_test_utils import MockRouter
+from novon_test_utils import MockRouter
 
-from lesoon.bff.main import AppClients, create_app
-from lesoon.bff.settings import Settings
-from lesoon.flow_api import FlowServiceClient
-from lesoon.uc_api import UcServiceClient
+from novon.bff.main import AppClients, create_app
+from novon.bff.settings import Settings
+from novon.flow_api import FlowServiceClient
+from novon.uc_api import UcServiceClient
 
 
 @pytest.fixture
