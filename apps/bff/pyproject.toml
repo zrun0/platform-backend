@@ -1,5 +1,5 @@
 [project]
-name = "lesoon-bff"
+name = "novon-bff"
 version = "0.1.0"
 description = "Backend-for-Frontend service"
 requires-python = ">=3.14"
@@ -7,27 +7,27 @@ dependencies = [
     "fastapi",
     "pydantic-settings",
     "uvicorn",
-    "lesoon-auth",
-    "lesoon-core",
-    "lesoon-flow-api",
-    "lesoon-uc-api",
+    "novon-auth",
+    "novon-core",
+    "novon-flow-api",
+    "novon-uc-api",
 ]
 
 [dependency-groups]
 dev = [
-    "lesoon-test-utils",
+    "novon-test-utils",
 ]
 
 [tool.uv.sources]
-lesoon-auth = { workspace = true }
-lesoon-core = { workspace = true }
-lesoon-flow-api = { workspace = true }
-lesoon-uc-api = { workspace = true }
-lesoon-test-utils = { workspace = true }
+novon-auth = { workspace = true }
+novon-core = { workspace = true }
+novon-flow-api = { workspace = true }
+novon-uc-api = { workspace = true }
+novon-test-utils = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "lesoon.bff"
+module-name = "novon.bff"

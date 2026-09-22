@@ -1,5 +1,5 @@
 [project]
-name = "lesoon-core"
+name = "novon-core"
 version = "0.1.0"
 description = "Shared core utilities: config, logging, errors, HTTP clients"
 requires-python = ">=3.14"
@@ -12,15 +12,15 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "lesoon-test-utils",
+    "novon-test-utils",
 ]
 
 [tool.uv.sources]
-lesoon-test-utils = { workspace = true }
+novon-test-utils = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "lesoon.core"
+module-name = "novon.core"

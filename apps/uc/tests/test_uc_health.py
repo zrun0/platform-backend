@@ -2,7 +2,7 @@
 
 from fastapi.testclient import TestClient
 
-from lesoon.uc.main import create_app
+from novon.uc.main import create_app
 
 
 def test_healthz_returns_ok() -> None:

@@ -4,15 +4,15 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
-    "lesoon-auth",
-    "lesoon-bff",
-    "lesoon-core",
-    "lesoon-flow",
-    "lesoon-flow-api",
-    "lesoon-test-utils",
-    "lesoon-uc",
-    "lesoon-uc-api",
-    "lesoon-workspace",
+    "novon-auth",
+    "novon-bff",
+    "novon-core",
+    "novon-flow",
+    "novon-flow-api",
+    "novon-test-utils",
+    "novon-uc",
+    "novon-uc-api",
+    "novon-workspace",
 ]
 constraints = [
     { name = "fastapi", specifier = ">=0.115" },
@@ -223,55 +223,64 @@ wheels = [
 ]
 
 [[package]]
-name = "lesoon-auth"
+name = "nodeenv"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
+]
+
+[[package]]
+name = "novon-auth"
 version = "0.1.0"
 source = { editable = "packages/auth" }
 dependencies = [
     { name = "fastapi" },
-    { name = "lesoon-core" },
+    { name = "novon-core" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "lesoon-core", editable = "packages/core" },
+    { name = "novon-core", editable = "packages/core" },
 ]
 
 [[package]]
-name = "lesoon-bff"
+name = "novon-bff"
 version = "0.1.0"
 source = { editable = "apps/bff" }
 dependencies = [
     { name = "fastapi" },
-    { name = "lesoon-auth" },
-    { name = "lesoon-core" },
-    { name = "lesoon-flow-api" },
-    { name = "lesoon-uc-api" },
+    { name = "novon-auth" },
+    { name = "novon-core" },
+    { name = "novon-flow-api" },
+    { name = "novon-uc-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "lesoon-test-utils" },
+    { name = "novon-test-utils" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "lesoon-auth", editable = "packages/auth" },
-    { name = "lesoon-core", editable = "packages/core" },
-    { name = "lesoon-flow-api", editable = "packages/flow-api" },
-    { name = "lesoon-uc-api", editable = "packages/uc-api" },
+    { name = "novon-auth", editable = "packages/auth" },
+    { name = "novon-core", editable = "packages/core" },
+    { name = "novon-flow-api", editable = "packages/flow-api" },
+    { name = "novon-uc-api", editable = "packages/uc-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "lesoon-test-utils", editable = "packages/test-utils" }]
+dev = [{ name = "novon-test-utils", editable = "packages/test-utils" }]
 
 [[package]]
-name = "lesoon-core"
+name = "novon-core"
 version = "0.1.0"
 source = { editable = "packages/core" }
 dependencies = [
@@ -283,7 +292,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "lesoon-test-utils" },
+    { name = "novon-test-utils" },
 ]
 
 [package.metadata]
@@ -295,17 +304,17 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "lesoon-test-utils", editable = "packages/test-utils" }]
+dev = [{ name = "novon-test-utils", editable = "packages/test-utils" }]
 
 [[package]]
-name = "lesoon-flow"
+name = "novon-flow"
 version = "0.1.0"
 source = { editable = "apps/flow" }
 dependencies = [
     { name = "fastapi" },
-    { name = "lesoon-auth" },
-    { name = "lesoon-core" },
-    { name = "lesoon-flow-api" },
+    { name = "novon-auth" },
+    { name = "novon-core" },
+    { name = "novon-flow-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
@@ -313,34 +322,34 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "lesoon-auth", editable = "packages/auth" },
-    { name = "lesoon-core", editable = "packages/core" },
-    { name = "lesoon-flow-api", editable = "packages/flow-api" },
+    { name = "novon-auth", editable = "packages/auth" },
+    { name = "novon-core", editable = "packages/core" },
+    { name = "novon-flow-api", editable = "packages/flow-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
 
 [[package]]
-name = "lesoon-flow-api"
+name = "novon-flow-api"
 version = "0.1.0"
 source = { editable = "packages/flow-api" }
 dependencies = [
-    { name = "lesoon-core" },
+    { name = "novon-core" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "lesoon-test-utils" },
+    { name = "novon-test-utils" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "lesoon-core", editable = "packages/core" }]
+requires-dist = [{ name = "novon-core", editable = "packages/core" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "lesoon-test-utils", editable = "packages/test-utils" }]
+dev = [{ name = "novon-test-utils", editable = "packages/test-utils" }]
 
 [[package]]
-name = "lesoon-test-utils"
+name = "novon-test-utils"
 version = "0.1.0"
 source = { editable = "packages/test-utils" }
 dependencies = [
@@ -355,14 +364,14 @@ requires-dist = [
 ]
 
 [[package]]
-name = "lesoon-uc"
+name = "novon-uc"
 version = "0.1.0"
 source = { editable = "apps/uc" }
 dependencies = [
     { name = "fastapi" },
-    { name = "lesoon-auth" },
-    { name = "lesoon-core" },
-    { name = "lesoon-uc-api" },
+    { name = "novon-auth" },
+    { name = "novon-core" },
+    { name = "novon-uc-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
@@ -370,34 +379,34 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi" },
-    { name = "lesoon-auth", editable = "packages/auth" },
-    { name = "lesoon-core", editable = "packages/core" },
-    { name = "lesoon-uc-api", editable = "packages/uc-api" },
+    { name = "novon-auth", editable = "packages/auth" },
+    { name = "novon-core", editable = "packages/core" },
+    { name = "novon-uc-api", editable = "packages/uc-api" },
     { name = "pydantic-settings" },
     { name = "uvicorn" },
 ]
 
 [[package]]
-name = "lesoon-uc-api"
+name = "novon-uc-api"
 version = "0.1.0"
 source = { editable = "packages/uc-api" }
 dependencies = [
-    { name = "lesoon-core" },
+    { name = "novon-core" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "lesoon-test-utils" },
+    { name = "novon-test-utils" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "lesoon-core", editable = "packages/core" }]
+requires-dist = [{ name = "novon-core", editable = "packages/core" }]
 
 [package.metadata.requires-dev]
-dev = [{ name = "lesoon-test-utils", editable = "packages/test-utils" }]
+dev = [{ name = "novon-test-utils", editable = "packages/test-utils" }]
 
 [[package]]
-name = "lesoon-workspace"
+name = "novon-workspace"
 version = "0.1.0"
 source = { virtual = "." }
 
@@ -419,15 +428,6 @@ dev = [
     { name = "pytest-asyncio", specifier = ">=0.23" },
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.8" },
-]
-
-[[package]]
-name = "nodeenv"
-version = "1.10.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
 ]
 
 [[package]]

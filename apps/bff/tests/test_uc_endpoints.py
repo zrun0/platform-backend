@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from lesoon_test_utils import MockRouter
-from lesoon_test_utils.helpers import error_response, ok_response
+from novon_test_utils import MockRouter
+from novon_test_utils.helpers import error_response, ok_response
 
-from lesoon.bff.settings import Settings
+from novon.bff.settings import Settings
 
 UC_URL = "http://uc-test:8002"
 

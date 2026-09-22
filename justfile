@@ -1,7 +1,7 @@
-# lesoon monorepo tasks. Run `just --list` to see all recipes.
+# novon monorepo tasks. Run `just --list` to see all recipes.
 
 # Dev server listen ports. The BFF's downstream URLs come from its settings
-# defaults (apps/bff/src/lesoon/bff/settings.py), which point at these same
+# defaults (apps/bff/src/novon/bff/settings.py), which point at these same
 # ports — also mirrored in compose.yaml (build args, published port, BFF
 # downstream URL envs). Update every side together when changing one.
 bff-port := "8000"
@@ -27,7 +27,7 @@ sync:
 # Usage: just dev <service-name>
 # Examples: just dev bff, just dev uc, just dev flow
 dev service:
-    uv run --package lesoon-{{ service }} uvicorn lesoon.{{ service }}.main:app --reload --port $(just dev-port {{ service }})
+    uv run --package novon-{{ service }} uvicorn novon.{{ service }}.main:app --reload --port $(just dev-port {{ service }})
 
 # Run all three dev services together (Ctrl-C stops all)
 dev-all:
@@ -74,7 +74,7 @@ release v:
     uv version {{ v }}
     for d in apps/* packages/*; do
         [ -f "$d/pyproject.toml" ] || continue
-        uv version --package "lesoon-${d##*/}" {{ v }}
+        uv version --package "novon-${d##*/}" {{ v }}
     done
 
 # ---- Docker ----

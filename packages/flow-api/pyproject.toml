@@ -1,24 +1,24 @@
 [project]
-name = "lesoon-flow-api"
+name = "novon-flow-api"
 version = "0.1.0"
 description = "Flow service API contract: models, protocol, and client"
 requires-python = ">=3.14"
 dependencies = [
-    "lesoon-core",
+    "novon-core",
 ]
 
 [dependency-groups]
 dev = [
-    "lesoon-test-utils",
+    "novon-test-utils",
 ]
 
 [tool.uv.sources]
-lesoon-core = { workspace = true }
-lesoon-test-utils = { workspace = true }
+novon-core = { workspace = true }
+novon-test-utils = { workspace = true }
 
 [build-system]
 requires = ["uv_build>=0.10.9,<0.13"]
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-module-name = "lesoon.flow_api"
+module-name = "novon.flow_api"

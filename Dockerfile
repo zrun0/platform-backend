@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Per-service image: docker build --build-arg SERVICE=bff --build-arg PORT=8000 \
-#   --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t lesoon-bff:0.2.0 .
+#   --build-arg GIT_SHA=$(git rev-parse --short HEAD) -t novon-bff:0.2.0 .
 # (GIT_SHA/VERSION default to unknown/dev; compose passes them from the justfile.)
 # uv is pinned to the version that authored uv.lock; bump both together.
 # Base pinned by digest for reproducible builds; re-resolve with
@@ -17,7 +17,7 @@ COPY apps packages ./
 # --no-editable builds real wheels of the member and its workspace deps into
 # the venv, so the runtime stage carries only the venv, no source tree.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable --package lesoon-${SERVICE}
+    uv sync --frozen --no-dev --no-editable --package novon-${SERVICE}
 
 FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6
 ARG SERVICE
@@ -43,4 +43,4 @@ EXPOSE ${PORT}
 # Single worker only: uc/flow keep state in per-process dicts.
 # 30s graceful shutdown matches compose stop_grace_period (35s) so in-flight
 # requests drain before SIGKILL.
-CMD ["sh", "-c", "exec uvicorn lesoon.${SERVICE}.main:app --host 0.0.0.0 --port ${PORT} --timeout-graceful-shutdown 30"]
+CMD ["sh", "-c", "exec uvicorn novon.${SERVICE}.main:app --host 0.0.0.0 --port ${PORT} --timeout-graceful-shutdown 30"]

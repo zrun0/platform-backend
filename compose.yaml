@@ -19,7 +19,7 @@ x-common: &common
   restart: unless-stopped
   stop_grace_period: 35s
   networks:
-    - lesoon
+    - novon
 
 # Shared build args; per-service args (SERVICE/PORT) merge on top.
 x-build-args: &build-args
@@ -31,7 +31,7 @@ services:
     # Tag is the workspace version (see `just _tag`); the commit is baked
     # into image labels (GIT_SHA/VERSION build args). One IMAGE_VERSION pins
     # or rolls back all three together — lockstep, no partial-pin footgun.
-    image: lesoon-bff:${IMAGE_VERSION:-local}
+    image: novon-bff:${IMAGE_VERSION:-local}
     build:
       context: .
       args:
@@ -52,7 +52,7 @@ services:
     <<: *common
 
   uc:
-    image: lesoon-uc:${IMAGE_VERSION:-local}
+    image: novon-uc:${IMAGE_VERSION:-local}
     build:
       context: .
       args:
@@ -63,7 +63,7 @@ services:
     <<: *common
 
   flow:
-    image: lesoon-flow:${IMAGE_VERSION:-local}
+    image: novon-flow:${IMAGE_VERSION:-local}
     build:
       context: .
       args:
@@ -74,5 +74,5 @@ services:
     <<: *common
 
 networks:
-  lesoon:
+  novon:
     driver: bridge

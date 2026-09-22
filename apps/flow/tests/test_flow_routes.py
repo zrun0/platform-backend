@@ -8,8 +8,8 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from lesoon.flow.api import routes as flow_routes
-from lesoon.flow.main import create_app
+from novon.flow.api import routes as flow_routes
+from novon.flow.main import create_app
 
 
 @pytest.fixture

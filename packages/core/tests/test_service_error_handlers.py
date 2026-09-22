@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from lesoon.core.errors import (
+from novon.core.errors import (
     AppError,
     ServiceBadRequestError,
     ServiceCallError,
@@ -12,7 +12,7 @@ from lesoon.core.errors import (
     ServiceTimeoutError,
     ServiceUnavailableError,
 )
-from lesoon.core.service_error_handlers import map_service_error_to_status
+from novon.core.service_error_handlers import map_service_error_to_status
 
 # ---------------------------------------------------------------------------
 # Error hierarchy — inheritance relationships

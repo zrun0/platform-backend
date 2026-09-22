@@ -7,8 +7,8 @@ from uuid import UUID
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from lesoon.core.http.context import RequestContext
-from lesoon.core.middleware import RequestIDMiddleware
+from novon.core.http.context import RequestContext
+from novon.core.middleware import RequestIDMiddleware
 
 
 def _app(*, with_middleware: bool, trust_inbound_trace: bool = False) -> TestClient:

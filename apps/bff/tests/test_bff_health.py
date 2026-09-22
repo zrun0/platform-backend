@@ -3,7 +3,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from lesoon.bff.main import create_app
+from novon.bff.main import create_app
 
 
 @pytest.fixture
