@@ -30,7 +30,15 @@ just fmt        # ruff format
 just lint       # ruff check
 just check      # pyright type check
 just test       # pytest
+just docker-build  # build the three service images
+just docker-up     # start the full stack (waits for healthchecks)
+just docker-down   # stop the stack
+just docker-logs   # tail service logs (omit name for all)
+just docker-smoke  # end-to-end smoke test (build, up, probe, teardown)
 ```
+
+Docker details (topology, env overrides, constraints) live in
+[docs/docker.md](docs/docker.md).
 
 Start `dev flow` and `dev uc` before `dev bff` — the BFF proxies to them at
 `http://127.0.0.1:8002` and `http://127.0.0.1:8001` (or use `dev-all`).

@@ -1,0 +1,78 @@
+# Shared healthcheck: probes /healthz on the container's own PORT env (set
+# from the per-service build arg in the Dockerfile), so the anchor carries
+# no per-service port.
+x-healthcheck: &healthcheck
+  test:
+    [
+      "CMD",
+      "python",
+      "-c",
+      'import os, urllib.request; urllib.request.urlopen("http://127.0.0.1:" + os.environ["PORT"] + "/healthz", timeout=2)',
+    ]
+  interval: 5s
+  timeout: 3s
+  retries: 5
+
+# Shared runtime contract: auto-restart after daemon/host restarts, and a
+# 35s drain window (> uvicorn's 30s graceful shutdown) before SIGKILL.
+x-common: &common
+  restart: unless-stopped
+  stop_grace_period: 35s
+  networks:
+    - lesoon
+
+# Shared build args; per-service args (SERVICE/PORT) merge on top.
+x-build-args: &build-args
+  GIT_SHA: ${GIT_SHA:-unknown}
+  VERSION: ${IMAGE_VERSION:-local}
+
+services:
+  bff:
+    # Tag is the workspace version (see `just _tag`); the commit is baked
+    # into image labels (GIT_SHA/VERSION build args). One IMAGE_VERSION pins
+    # or rolls back all three together — lockstep, no partial-pin footgun.
+    image: lesoon-bff:${IMAGE_VERSION:-local}
+    build:
+      context: .
+      args:
+        <<: *build-args
+        SERVICE: bff
+        PORT: 8000
+    ports:
+      - "8000:8000"
+    environment:
+      FLOW_API_BASE_URL: http://flow:8002
+      UC_API_BASE_URL: http://uc:8001
+    depends_on:
+      uc:
+        condition: service_healthy
+      flow:
+        condition: service_healthy
+    healthcheck: *healthcheck
+    <<: *common
+
+  uc:
+    image: lesoon-uc:${IMAGE_VERSION:-local}
+    build:
+      context: .
+      args:
+        <<: *build-args
+        SERVICE: uc
+        PORT: 8001
+    healthcheck: *healthcheck
+    <<: *common
+
+  flow:
+    image: lesoon-flow:${IMAGE_VERSION:-local}
+    build:
+      context: .
+      args:
+        <<: *build-args
+        SERVICE: flow
+        PORT: 8002
+    healthcheck: *healthcheck
+    <<: *common
+
+networks:
+  lesoon:
+    driver: bridge
